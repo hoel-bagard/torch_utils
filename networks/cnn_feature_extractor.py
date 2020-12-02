@@ -12,7 +12,7 @@ from .layers import (
 from .network_utils import layer_init
 
 
-class FeatureExtractor(nn.Module):
+class CNNFeatureExtractor(nn.Module):
     def __init__(self, channels: List[int] = [], sizes: List[int] = [], strides: List[int] = [],
                  paddings: List[int] = [], layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
         """
