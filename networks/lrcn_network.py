@@ -42,7 +42,7 @@ class LRCN(nn.Module):
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
         x = rearrange(inputs, "b t c h w -> (b t) c h w")
-        x = self.cnn(x)
+        x = self.feature_extractor(x)
         x = x.view(batch_size, timesteps, -1)
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)
         if not self.n_to_n:
