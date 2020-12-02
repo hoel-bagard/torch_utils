@@ -51,6 +51,10 @@ class TensorBoard():
                                                                device=self.device), ))
             self.train_tb_writer.flush()
 
+    def close_writers(self) -> None:
+        self.train_tb_writer.close()
+        self.val_tb_writer.close()
+
     def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
         """
         Writes images with predictions written on them to TensorBoard
