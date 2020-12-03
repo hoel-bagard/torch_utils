@@ -28,9 +28,11 @@ class Trainer:
         """
         self.model = model
         self.loss_fn = loss_fn
+        # TODO: have the optimizer as a parameter instead of lr and weight_decay
         self.optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
+        # TODO: get get batchsize from the dataloader
         self.batch_size = batch_size
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove hardcoded 0 ?
