@@ -13,7 +13,7 @@ class Trainer:
     def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module,
                  train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader,
                  batch_size: int, lr: float = 4e-3, weight_decay: float = 0,
-                 on_epoch_begin: Optional[Callable[[Any], Any]] = None):
+                 on_epoch_begin: Optional[Callable[[Any], None]] = None):
         """
         Trainer class that handles training and validation epochs
         Args:
@@ -56,6 +56,7 @@ class Trainer:
             data_loading_finished_time = time.perf_counter()
             self.optimizer.zero_grad()
             if self.on_epoch_begin:
+                # TODO: send self. Have the callable get Trainer instead of Any.
                 self.on_epoch_begin(self.batch_size)
 
             inputs, labels = batch["data"], batch["label"]
