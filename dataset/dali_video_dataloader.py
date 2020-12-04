@@ -87,7 +87,7 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
     return label_list
 
 
-def cupy_data_aug(video):
+def cupy_data_aug(video: cp.ndarray):
     """For now everything is in one function"""
     # TODO: set batch_processing to True in the ops.PythonFunction
     # TODO: in the documentation it is specified that the input must not be modified,
@@ -178,7 +178,7 @@ class NoAugPipeline(LoadingPipeline):
 
 class DALIVideoLoader:
     def __init__(self, data_path: str, label_map: Dict, sequence_length: int, batch_size: int,
-                 limit: Optional[int] = None, mode: str = "Train"):
+                 device_id: int = 0, limit: Optional[int] = None, mode: str = "Train"):
         """
         Args:
             data_path: Path to the root folder of the dataset.
@@ -187,6 +187,7 @@ class DALIVideoLoader:
             label_map: dictionarry mapping an int to a class
             sequence_length: Number of elements in each sequence
             batch_size: Batch size
+            device_id: Which GPU to use
             limit (int, optional): If given then the number of elements for each class in the dataset
                                    will be capped to this number
             mode: If Train the data augmentation will be applied, if Validation then there will be no data augmentation
@@ -205,7 +206,7 @@ class DALIVideoLoader:
             self.pipeline = AugmentationPipeline(batch_size=batch_size,
                                                  sequence_length=sequence_length,
                                                  num_threads=2,
-                                                 device_id=0,
+                                                 device_id=device_id,
                                                  file_list=file_list,
                                                  exec_async=False,  # should only be used for prototyping and debugging
                                                  exec_pipelined=False)  # Same as above
@@ -213,7 +214,7 @@ class DALIVideoLoader:
             self.pipeline = NoAugPipeline(batch_size=batch_size,
                                           sequence_length=sequence_length,
                                           num_threads=2,
-                                          device_id=0,
+                                          device_id=device_id,
                                           file_list=file_list)
         self.pipeline.build()
 
