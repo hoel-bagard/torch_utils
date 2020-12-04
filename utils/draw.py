@@ -10,34 +10,25 @@ import numpy as np
 import torch
 
 
-def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
-              label_map: Dict[int, str], n_to_n: bool,
-              size: Optional[Tuple[int, int]] = None, ) -> np.ndarray:
+def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
+                  label_map: Dict[int, str], size: Optional[Tuple[int, int]] = None, ) -> np.ndarray:
     """
     Draw predictions and labels on the image to help with TensorBoard visualisation.
     Args:
-        videos: Raw videos.
+        imgs: Raw imgs.
         predictions: Predictions of the network, after softmax but before taking argmax
         labels: Labels corresponding to the images
         label_map: Dictionary linking class index to class name
-        n_to_n: True if using one label for each element of the sequence
         size: If given, the images will be resized to this size
     Returns: images with information written on them
     """
-    videos: np.ndarray = videos.cpu().detach().numpy()
+    imgs: np.ndarray = imgs.cpu().detach().numpy()
     labels: np.ndarray = labels.cpu().detach().numpy()
     predictions: np.ndarray = predictions.cpu().detach().numpy()
 
-    # TODO: do that before calling the function, that way it'll be a general draw_pred_img func
-    frame_to_keep = len(labels) // 2
-    imgs = videos[:, frame_to_keep, :, :, :]
-
     imgs = rearrange(imgs, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
-    if n_to_n:
-        predictions = predictions[:, frame_to_keep]
-        labels = labels[:, frame_to_keep]
 
-    new_imgs = []
+    out_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
         # Just print the top 3 classes
         # Gets indices of top 3 pred
@@ -53,8 +44,13 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-        new_imgs.append(img.get())
-    return np.asarray(new_imgs)
+
+        out_img = img.get()
+        # If opencv resizes a grayscale image, it removes the channel dimension
+        if out_img.ndim == 2:
+            out_img = np.expand_dims(out_img, -1)
+        out_imgs.append(out_img)
+    return np.asarray(out_imgs)
 
 
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
@@ -79,7 +75,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         preds = np.broadcast_to(preds, (video.shape[0], preds.shape[0]))
 
     # TODO: remove this line # video = video.transpose(0, 2, 3, 1)  # Conversion to H x W x C
-    video = rearrange(video, 'b c w h -> b w h c')
+    video = rearrange(video, 'b c h w -> b h w c')
 
     new_video = []
     for img, preds, label in zip(video, preds, labels):

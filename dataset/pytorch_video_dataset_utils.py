@@ -70,7 +70,7 @@ def read_n_to_n_label(label: str, label_map: Dict[int, str], video_length: int):
         if label_map[key] in label["file_path"]:
             video_cls = key
             break
-    assert video_cls, f"There is no class corresponding to {label['file_path']}"
+    assert 'video_cls' in locals(), f"There is no class corresponding to {label['file_path']}"
 
     for key, value in label_map.items():
         if(value == "not_visible"):

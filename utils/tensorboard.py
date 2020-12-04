@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 from .draw import (
-    draw_pred,
+    draw_pred_img,
     draw_pred_video
 )
 from .metrics import Metrics
@@ -81,15 +81,19 @@ class TensorBoard():
             predictions, videos = predictions[:self.max_outputs], videos[:self.max_outputs]
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
 
-        # Write prediction on some images and add them to TensorBoard
-        out_imgs = draw_pred(videos, predictions, labels, self.label_map, self.n_to_n)
+        # Keep only on frame per video (middle one)
+        frame_to_keep = labels.shape[1] // 2
+        imgs = videos[:, frame_to_keep, :, :, :]
+        if self.n_to_n:
+            predictions = predictions[:, frame_to_keep]
+            labels = labels[:, frame_to_keep]
 
+        # Write prediction on the images
+        out_imgs = draw_pred_img(imgs, predictions, labels, self.label_map)
+
+        # Add them to TensorBoard
         for image_index, out_img in enumerate(out_imgs):
-            # If opencv resizes the image, it removes the channel dimension
-            if out_img.ndim == 2:
-                out_img = np.expand_dims(out_img, -1)
-            out_img = rearrange(out_img, 'w h c -> c w h')
-            tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch)
+            tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch, dataformats="HWC")
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
         """
@@ -119,7 +123,7 @@ class TensorBoard():
 
         # Write prediction on a video and add it to TensorBoard
         out_video = draw_pred_video(videos[0], predictions[0], labels[0], self.label_map, self.n_to_n)
-        out_video = np.transpose(out_video, (0, 3, 1, 2))  # HWC -> CHW
+        out_video = rearrange(out_video, 't h w c -> t c h w')
         out_video = np.expand_dims(out_video, 0)  # Re-add batch dimension
 
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
@@ -148,8 +152,7 @@ class TensorBoard():
 
         print("Creating confusion matrix image" + ' ' * (os.get_terminal_size()[0] - 31), end="\r", flush=True)
         confusion_matrix = self.metrics.get_confusion_matrix()
-        confusion_matrix = np.transpose(confusion_matrix, (2, 0, 1))  # HWC -> CHW
-        tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch)
+        tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch, dataformats="HWC")
 
         return avg_acc
 
