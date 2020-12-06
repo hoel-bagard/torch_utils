@@ -60,7 +60,7 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
             if label_map[key] in label["file_path"]:
                 video_cls = key
                 break
-        assert video_cls, f"There is no class corresponding to {label['file_path']}"
+        assert 'video_cls' in locals(), f"There is no class corresponding to {label['file_path']}"
 
         # The first toggle in the label corresponds to when the object becomes visible
         # It can be visible from the start. Also, there can be no timestamp if it is never visible
@@ -151,7 +151,7 @@ class AugmentationPipeline(LoadingPipeline):
                  file_list: str, mode: str = "Train", exec_async=True, exec_pipelined=True):
         super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode,
                          exec_async=exec_async, exec_pipelined=exec_pipelined)
-        self.cupy_data_aug = ops.PythonFunction(function=cupy_data_aug, num_outputs=1, device="gpu")
+        # self.cupy_data_aug = ops.PythonFunction(function=cupy_data_aug, num_outputs=1, device="gpu")
         self.rng = ops.CoinFlip()
         self.rng2 = ops.CoinFlip()
         self.flip = ops.Flip(device="gpu")

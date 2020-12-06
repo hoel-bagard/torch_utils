@@ -42,7 +42,7 @@ class DataIterator(object):
 class VideoDataloader(object):
     """Wrapper around the PyTorch / DALI video dataLoaders"""
     def __init__(self, data_path: str, dali: bool, label_map: Dict[int, str], image_sizes: Tuple[int, int],
-                 batch_size: int, num_workers: int, drop_last: bool = False,
+                 batch_size: int, num_workers: int, dali_device_id: int = 0, drop_last: bool = False,
                  limit: Optional[int] = None, load_data: bool = False, **model_config):
         """
         Args:
@@ -52,6 +52,7 @@ class VideoDataloader(object):
             image_sizes: Size of the input images
             batch_size: Batch size to use
             num_workers: Number of workers for the PyTorch DataLoader
+            dali_device_id: If using DALI, which GPU to use
             drop_last: Wether to drop last elements to get "perfect" batches, should be True for LSTMs
             limit: If not None then at most that number of elements will be used
             load_data: If true then the videos will be loaded in RAM (when dali is set to False)
@@ -61,6 +62,8 @@ class VideoDataloader(object):
         if dali:
             self.dataloader: pytorch.DALIGenericIterator = DALIVideoLoader(data_path,
                                                                            label_map,
+                                                                           model_config["sequence_length"],
+                                                                           batch_size,
                                                                            limit=limit,
                                                                            mode=mode)
         else:
