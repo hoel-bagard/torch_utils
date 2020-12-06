@@ -45,6 +45,7 @@ class TensorBoard():
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
         if model.__class__.__name__ != "LRCN":
+            print("Adding TensorBoard to graph")
             self.train_tb_writer.add_graph(model, (torch.empty(2, sequence_length,
                                                                1 if gray_scale else 3,
                                                                image_sizes[0], image_sizes[1],

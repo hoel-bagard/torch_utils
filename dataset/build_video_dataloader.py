@@ -28,8 +28,12 @@ class DataIterator(object):
     def __next__(self):
         batch = self.dataloader_iter.next()
         # DALI has an extra dimension (don't know why), and the data is already on GPU.
-        if self.dataloader.__class__.__name__ == "DALILoader":
+        if self.dataloader.dali:
+            print("\nDALI dataloading is broken, use the PyTorch one please")
+            exit()
             batch = batch[0]
+            # TODO: temporary fix for n_to_n mode. Should not be done for n to 1 mode.
+            # batch["label"] = batch["label"].repeat(*batch["data"].shape[:2]).long()
         else:
             batch["data"] = batch["data"].to(self.device).float()
             batch["label"] = batch["label"].to(self.device).long()
@@ -57,6 +61,7 @@ class VideoDataloader(object):
             limit: If not None then at most that number of elements will be used
             load_data: If true then the videos will be loaded in RAM (when dali is set to False)
         """
+        self.dali = dali
         mode = "Train" if "Train" in data_path else "Validation"
 
         if dali:

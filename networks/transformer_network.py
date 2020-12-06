@@ -13,7 +13,7 @@ from .network_utils import (
 class Transformer(nn.Module):
     def __init__(self, feature_extractor: nn.Module, batch_size: int,
                  output_classes: int, n_to_n: bool, sequence_length: int,
-                 dim_feedforward: int = 512, nlayers: int = 3,
+                 dim_feedforward: int = 512, n_layers: int = 3,
                  layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
         """
         CNN feature extractor followed by an transformer layers
@@ -33,7 +33,7 @@ class Transformer(nn.Module):
         self.cnn_output_size = get_cnn_output_size(**kwargs, output_channels=kwargs["channels"][-1])
 
         self.transformer = TransformerLayer(self.cnn_output_size, output_classes,
-                                            dim_feedforward=dim_feedforward, nlayers=nlayers)
+                                            dim_feedforward=dim_feedforward, nlayers=n_layers)
         self.dense = nn.Linear(sequence_length * output_classes, output_classes)
 
     def forward(self, inputs):
