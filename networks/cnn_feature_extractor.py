@@ -28,9 +28,10 @@ class CNNFeatureExtractor(nn.Module):
 
         self.blocks = nn.Sequential(*[Conv2D(channels[i], channels[i+1], sizes[i], stride=strides[i],
                                              padding=paddings[i])
-                                      for i in range(0, len(sizes))])
+                                      for i in range(0, len(channels)-1)])
 
-        self.apply(layer_init)
+        if layer_init:
+            self.apply(layer_init)
 
     def forward(self, inputs):
         x = self.blocks(inputs)
@@ -54,7 +55,8 @@ class DarknetFeatureExtrator(nn.Module):
         self.blocks = nn.Sequential(*[DarknetBlock(channels[i], channels[i+1], blocks[i])
                                       for i in range(0, len(channels)-1)])
 
-        self.apply(layer_init)
+        if layer_init:
+            self.apply(layer_init)
 
     def forward(self, inputs):
         x = self.blocks(inputs)

@@ -24,7 +24,7 @@ class VideoDataloader(object):
         Args:
             data_path: Path to the data to load
             dali: True to use a dali dataloader, otherwise a PyTorch DataLoader will be used
-            label_map: dictionarry mapping an int to a class
+            label_map: dictionary mapping an int to a class
             image_sizes: Size of the input images
             batch_size: Batch size to use
             num_workers: Number of workers for the PyTorch DataLoader
@@ -64,8 +64,8 @@ class VideoDataloader(object):
                 ])
 
             dataset = PytorchVideoDataset(data_path, label_map, model_config["n_to_n"], model_config["sequence_length"],
-                                          model_config["grayscale"], image_sizes, transform=data_transforms, limit=limit,
-                                          load_data=load_data)
+                                          model_config["grayscale"], image_sizes, transform=data_transforms,
+                                          limit=limit, load_data=load_data)
             self.dataloader = torch.utils.data.DataLoader(dataset,
                                                           batch_size=batch_size,
                                                           shuffle=(mode == "Train"),

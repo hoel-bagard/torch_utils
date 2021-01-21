@@ -1,6 +1,8 @@
 from typing import (
     Tuple,
-    List
+    List,
+    Union,
+    Optional
 )
 import math
 
@@ -37,7 +39,8 @@ def layer_init(layer, weight_gain: float = 1, bias_const: float = 0,
 
 
 def get_cnn_output_size(image_sizes: Tuple[int, int], sizes: List[int], strides: List[int], paddings: List[int],
-                        output_channels: int, **kwargs) -> int:
+                        output_channels: Optional[int] = None,
+                        dense: bool = True, **kwargs) -> Union[int, Tuple[int, int]]:
     """
     Computes the output size of a cnn  (flattened)
     Args:
@@ -45,7 +48,8 @@ def get_cnn_output_size(image_sizes: Tuple[int, int], sizes: List[int], strides:
         sizes: List with the kernel size for each convolution
         strides: List with the stride for each convolution
         padding: List with the padding for each convolution
-        output_channels: Number of output channels of the last convolution
+        output_channels: Number of output channels of the last convolution, required if dense=True
+        dense: If True, then this function returns an int (number of values) otherwise it returns [width, height]
     """
     width, height = image_sizes
     for kernel_size, stride, padding in zip(sizes, strides, paddings):
@@ -54,4 +58,8 @@ def get_cnn_output_size(image_sizes: Tuple[int, int], sizes: List[int], strides:
     for kernel_size, stride, padding in zip(sizes, strides, paddings):
         height = ((height - kernel_size + 2*padding) // stride) + 1
 
-    return width*height*output_channels
+    if dense:
+        assert output_channels, "The output_channels argument is required in the 'dense' case."
+        return width*height*output_channels
+    else:
+        return [width, height]

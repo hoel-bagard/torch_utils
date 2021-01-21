@@ -1,7 +1,6 @@
 from typing import (
     Union,
-    Tuple,
-    Optional
+    Tuple
 )
 
 import torch
@@ -10,7 +9,8 @@ import torch.nn as nn
 
 class Layer(nn.Module):
     # Default layer arguments
-    ACTIVATION = torch.nn.LeakyReLU(negative_slope=0.1)
+    ACTIVATION = torch.nn.LeakyReLU
+    ACTIVATION_KWARGS = {"negative_slope": 0.1}
 
     BATCH_NORM_TRAINING = True
     BATCH_NORM_MOMENTUM = 0.01
@@ -18,7 +18,7 @@ class Layer(nn.Module):
     def __init__(self, activation):
         super().__init__()
         # Preload default
-        self.activation = Layer.ACTIVATION if activation == 0 else activation
+        self.activation = Layer.ACTIVATION(**Layer.ACTIVATION_KWARGS) if activation == 0 else activation
 
     def forward(self, input_data: torch.Tensor) -> torch.Tensor:
         output = input_data
@@ -43,16 +43,16 @@ class Conv2D(Layer):
         return super().forward(self.conv(x))
 
 
-class Conv3d(Layer):
+class Conv3D(Layer):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
                  stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
                  activation=0, use_batch_norm: bool = True, **kwargs):
         super().__init__(activation)
 
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride,
-                              bias=not self.use_batch_norm, **kwargs)
+                              bias=not use_batch_norm, **kwargs)
         self.batch_norm = nn.BatchNorm3d(out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
-                                         track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
+                                         track_running_stats=Layer.BATCH_NORM_TRAINING) if use_batch_norm else None
 
     def forward(self, input_data: torch.Tensor) -> torch.Tensor:
         return super().forward(self.conv(input_data))
