@@ -1,27 +1,61 @@
 from typing import (
     Union,
-    Tuple
+    Tuple,
+    Optional
 )
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
-class Conv2D(torch.nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
-                 stride: Union[int, Tuple[int, int]] = 1, padding: int = 0):
+class Layer(nn.Module):
+    # Default layer arguments
+    ACTIVATION = torch.nn.LeakyReLU(negative_slope=0.1)
+
+    BATCH_NORM_TRAINING = True
+    BATCH_NORM_MOMENTUM = 0.01
+
+    def __init__(self, activation):
         super().__init__()
+        # Preload default
+        self.activation = Layer.ACTIVATION if activation == 0 else activation
+
+    def forward(self, input_data: torch.Tensor) -> torch.Tensor:
+        output = input_data
+        if self.activation is not None:
+            output = self.activation(output)
+        if self.batch_norm is not None:
+            output = self.batch_norm(output)
+        return output
+
+
+class Conv2D(Layer):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
+                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
+                 activation=0, use_batch_norm: bool = True, **kwargs):
+        super().__init__(activation)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride,
-                              padding=padding, bias=False)
-        self.batch_norm = nn.BatchNorm2d(out_channels, momentum=0.01)
+                              padding=padding, bias=not use_batch_norm)
+        self.batch_norm = nn.BatchNorm2d(out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
+                                         track_running_stats=Layer.BATCH_NORM_TRAINING) if use_batch_norm else None
 
     def forward(self, x):
-        x = self.conv(x)
-        x = self.batch_norm(x)
-        x = F.leaky_relu(x, 0.1)
+        return super().forward(self.conv(x))
 
-        return x
+
+class Conv3d(Layer):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
+                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
+                 activation=0, use_batch_norm: bool = True, **kwargs):
+        super().__init__(activation)
+
+        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride,
+                              bias=not self.use_batch_norm, **kwargs)
+        self.batch_norm = nn.BatchNorm3d(out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
+                                         track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
+
+    def forward(self, input_data: torch.Tensor) -> torch.Tensor:
+        return super().forward(self.conv(input_data))
 
 
 class DarknetResidualBlock(nn.Module):

@@ -15,34 +15,6 @@ from .dali_video_dataloader import DALIVideoLoader
 import src.torch_utils.dataset.pytorch_video_transforms as transforms
 
 
-class DataIterator(object):
-    """An iterator."""
-    def __init__(self, dataloader):
-        self.dataloader = dataloader
-        self.dataloader_iter = iter(dataloader.dataloader)
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove the hardcoded 0 ?
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        batch = self.dataloader_iter.next()
-        # DALI has an extra dimension (don't know why), and the data is already on GPU.
-        if self.dataloader.dali:
-            print("\nDALI dataloading is broken, use the PyTorch one please")
-            exit()
-            batch = batch[0]
-            # TODO: temporary fix for n_to_n mode. Should not be done for n to 1 mode.
-            # batch["label"] = batch["label"].repeat(*batch["data"].shape[:2]).long()
-        else:
-            batch["data"] = batch["data"].to(self.device).float()
-            batch["label"] = batch["label"].to(self.device).long()
-        return batch
-
-    def __len__(self):
-        return len(self.dataloader)
-
-
 class VideoDataloader(object):
     """Wrapper around the PyTorch / DALI video dataLoaders"""
     def __init__(self, data_path: str, dali: bool, label_map: Dict[int, str], image_sizes: Tuple[int, int],
@@ -105,6 +77,36 @@ class VideoDataloader(object):
 
     def __iter__(self):
         return DataIterator(self)
+
+    def __len__(self):
+        return len(self.dataloader)
+
+
+class DataIterator(object):
+    """An iterator."""
+    def __init__(self, dataloader: VideoDataloader):
+        self.dataloader = dataloader
+        self.dataloader_iter = iter(dataloader.dataloader)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove the hardcoded 0 ?
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # DALI has an extra dimension (don't know why), and the data is already on GPU.
+        batch = next(self.dataloader_iter)
+        if self.dataloader.dali:
+            print("\nDALI dataloading is broken, use the PyTorch one please")
+            exit()
+            # batch = batch[0]
+            # # TODO: temporary fix for n_to_n mode. Should not be done for n to 1 mode.
+            # batch["label"] = batch["label"].repeat(*batch["data"].shape[:2]).long()
+            # print(f"DALI labels: {batch['label']}")
+            # return batch
+        else:
+            batch["data"] = batch["data"].to(self.device).float()
+            batch["label"] = batch["label"].to(self.device).long()
+            return batch
 
     def __len__(self):
         return len(self.dataloader)

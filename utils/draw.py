@@ -74,7 +74,6 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         labels = np.broadcast_to(labels, video.shape[0])
         preds = np.broadcast_to(preds, (video.shape[0], preds.shape[0]))
 
-    # TODO: remove this line # video = video.transpose(0, 2, 3, 1)  # Conversion to H x W x C
     video = rearrange(video, 'b c h w -> b h w c')
 
     new_video = []
