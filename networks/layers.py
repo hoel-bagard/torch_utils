@@ -1,6 +1,7 @@
 from typing import (
     Union,
-    Tuple
+    Tuple,
+    Optional
 )
 
 import torch
@@ -19,7 +20,7 @@ class Layer(nn.Module):
     def __init__(self, activation, use_batch_norm):
         super().__init__()
         # Preload default
-        self.batch_norm: torch.nn._BatchNorm = None
+        self.batch_norm: Optional[torch.nn._BatchNorm] = None
         self.activation = Layer.ACTIVATION(**Layer.ACTIVATION_KWARGS) if activation == 0 else activation
         self.use_batch_norm = Layer.USE_BATCH_NORM if use_batch_norm is None else use_batch_norm
 
@@ -39,7 +40,7 @@ class Conv2D(Layer):
                  activation=0, use_batch_norm: bool = None, **kwargs):
         super().__init__(activation, use_batch_norm)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride,
-                              padding=padding, bias=not Layer.USE_BATCH_NORM)
+                              padding=padding, bias=not self.use_batch_norm)
         self.batch_norm = nn.BatchNorm2d(
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
             track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
@@ -55,7 +56,7 @@ class Conv3D(Layer):
         super().__init__(activation, use_batch_norm)
 
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride,
-                              bias=not Layer.USE_BATCH_NORM, **kwargs)
+                              bias=not self.use_batch_norm, **kwargs)
         self.batch_norm = nn.BatchNorm3d(
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
             track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
