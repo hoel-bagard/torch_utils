@@ -19,6 +19,7 @@ class Layer(nn.Module):
     def __init__(self, activation, use_batch_norm):
         super().__init__()
         # Preload default
+        self.batch_norm: torch.nn._BatchNorm = None
         self.activation = Layer.ACTIVATION(**Layer.ACTIVATION_KWARGS) if activation == 0 else activation
         self.use_batch_norm = Layer.USE_BATCH_NORM if use_batch_norm is None else use_batch_norm
 
@@ -26,7 +27,8 @@ class Layer(nn.Module):
         output = input_data
         if self.activation is not None:
             output = self.activation(output)
-        if self.use_batch_norm is not None:
+        if self.use_batch_norm:
+            # It is assumed here that if using batch norm, then self.batch_norm has been instanciated.
             output = self.batch_norm(output)
         return output
 
@@ -40,7 +42,7 @@ class Conv2D(Layer):
                               padding=padding, bias=not Layer.USE_BATCH_NORM)
         self.batch_norm = nn.BatchNorm2d(
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
-            track_running_stats=Layer.BATCH_NORM_TRAINING) if Layer.USE_BATCH_NORM else None
+            track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
 
     def forward(self, x):
         return super().forward(self.conv(x))
@@ -56,7 +58,7 @@ class Conv3D(Layer):
                               bias=not Layer.USE_BATCH_NORM, **kwargs)
         self.batch_norm = nn.BatchNorm3d(
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
-            track_running_stats=Layer.BATCH_NORM_TRAINING) if Layer.USE_BATCH_NORM else None
+            track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
 
     def forward(self, input_data: torch.Tensor) -> torch.Tensor:
         return super().forward(self.conv(input_data))
