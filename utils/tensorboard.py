@@ -1,12 +1,15 @@
 import os
 from typing import (
     Tuple,
-    Dict
+    Dict,
+    Optional,
+    Callable
 )
 
 from einops import rearrange
 import numpy as np
 import torch
+from torch import Tensor
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
@@ -20,8 +23,8 @@ from .metrics import Metrics
 # TODO: Remove the LRCN references to make it into a general classification TensorBoard
 class TensorBoard():
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 sequence_length: int, n_to_n: bool, gray_scale: bool, image_sizes: Tuple[int, int],
-                 max_outputs: int = 4):
+                 sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int],
+                 n_to_n: bool = False, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
         Args:
@@ -32,6 +35,7 @@ class TensorBoard():
             sequence_length: Number of elements in each sequence
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)
+            n_to_n: If using videos, is it N to 1 or N to N
             max_outputs: Number of images kept and dislpayed in TensorBoard
         """
         super().__init__()
@@ -56,38 +60,45 @@ class TensorBoard():
         self.train_tb_writer.close()
         self.val_tb_writer.close()
 
-    def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
+    def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader,
+                     mode: str = "Train",  input_is_video: bool = "False",
+                     preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
+                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None):
         """
         Writes images with predictions written on them to TensorBoard
         Args:
             epoch: Current epoch
             dataloader: The images will be sampled from this dataset
             mode: Either "Train" or "Validation"
+            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
+            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
         print("Writing images" + ' ' * (os.get_terminal_size()[0] - len("Writing images")), end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
+        # TODO: is iter needed ?
         batch = next(iter(dataloader))  # Get some data
 
-        # TODO: Have optional pre and post process functions to handle the LSTM case
-        if self.model.__class__.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
-            videos, labels = batch["data"].float(), batch["label"][:self.max_outputs]
-            self.model.reset_lstm_state(videos.shape[0])
-        else:
-            videos, labels = batch["data"][:self.max_outputs].float(), batch["label"][:self.max_outputs]
+        data, labels = batch["data"][:self.max_outputs].float(), batch["label"][:self.max_outputs]
+        if preprocess_fn:
+            data, labels = preprocess_fn(data, labels)
 
         # Get some predictions
-        predictions = self.model(videos.to(self.device))
-        if self.model.__class__.__name__ == "LRCN":
-            predictions, videos = predictions[:self.max_outputs], videos[:self.max_outputs]
+        predictions = self.model(data.to(self.device))
+        data, predictions = data[:self.max_outputs], predictions[:self.max_outputs]  # Just in case (damn LSTM)
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
+        if postprocess_fn:
+            data, predictions = postprocess_fn(data, predictions)
 
-        # Keep only on frame per video (middle one)
-        frame_to_keep = labels.shape[1] // 2
-        imgs = videos[:, frame_to_keep, :, :, :]
-        if self.n_to_n:
-            predictions = predictions[:, frame_to_keep]
-            labels = labels[:, frame_to_keep]
+        if input_is_video:
+            # Keep only on frame per video (middle one)
+            frame_to_keep = labels.shape[1] // 2
+            imgs = data[:, frame_to_keep, :, :, :]
+            if self.n_to_n:
+                predictions = predictions[:, frame_to_keep]
+                labels = labels[:, frame_to_keep]
+        else:
+            imgs = data
 
         # Write prediction on the images
         out_imgs = draw_pred_img(imgs, predictions, labels, self.label_map)
@@ -96,31 +107,33 @@ class TensorBoard():
         for image_index, out_img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch, dataformats="HWC")
 
-    def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
+    def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
+                     preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
+                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None):
         """
         Write a video with predictions written on it to TensorBoard
         Args:
             epoch: Current epoch
             dataloader: The images will be sampled from this dataset
             mode: Either "Train" or "Validation"
+            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
+            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
         print("Writing videos" + ' ' * (os.get_terminal_size()[0] - len("Writing videos")), end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
         batch = next(iter(dataloader))  # Get some data
 
-        # TODO: Have optional pre and post process functions to handle the LSTM case
-        if self.model.__class__.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
-            videos, labels = batch["data"].float(), batch["label"][:self.max_outputs]
-            self.model.reset_lstm_state(videos.shape[0])
-        else:
-            videos, labels = batch["data"][:1].float(), batch["label"][:1]
+        videos, labels = batch["data"][:1].float(), batch["label"][:1]
+        if preprocess_fn:
+            videos, labels = preprocess_fn(videos, labels)
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
-        if self.model.__class__.__name__ == "LRCN":
-            predictions, videos = predictions[:1], videos[:1]
+        videos, predictions = videos[:1], predictions[:1]  # Just in case (damn LSTM)
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
+        if postprocess_fn:
+            videos, predictions = postprocess_fn(videos, predictions)
 
         # Write prediction on a video and add it to TensorBoard
         out_video = draw_pred_video(videos[0], predictions[0], labels[0], self.label_map, self.n_to_n)
