@@ -1,7 +1,6 @@
 import os
 import time
 from typing import (
-    Any,
     Callable,
     Optional
 )
@@ -12,8 +11,8 @@ import torch
 class Trainer:
     def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module,
                  train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader,
-                 batch_size: int, lr: float = 4e-3, weight_decay: float = 0,
-                 on_epoch_begin: Optional[Callable[[Any], None]] = None):
+                 batch_size: int, optimizer: torch.optim.Optimizer,
+                 on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """
         Trainer class that handles training and validation epochs
         Args:
@@ -21,18 +20,16 @@ class Trainer:
             loss_fn: Function used to compute the loss of the model
             train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
             val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
-            lr: Learning rate
-            weight_decay: Used for weight regularisation (L2 penalty)
+            optimizer: Optimizer to use
             model_name: LRCN if using an LSTM (reset the state at each step)
             on_epoch_begin: function that will be called at the beginning of every epoch.
         """
         self.model = model
         self.loss_fn = loss_fn
-        # TODO: have the optimizer as a parameter instead of lr and weight_decay
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        self.optimizer = optimizer
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        # TODO: get get batchsize from the dataloader
+        # TODO: get get batchsize from the dataloader (require a dataloader wrapper that does videos, images, etc...)
         self.batch_size = batch_size
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove hardcoded 0 ?
@@ -56,8 +53,7 @@ class Trainer:
             data_loading_finished_time = time.perf_counter()
             self.optimizer.zero_grad()
             if self.on_epoch_begin:
-                # TODO: send self. Have the callable get Trainer instead of Any.
-                self.on_epoch_begin(self.batch_size)
+                self.on_epoch_begin(self)
 
             inputs, labels = batch["data"], batch["label"]
             outputs = self.model(inputs)

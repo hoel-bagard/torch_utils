@@ -11,8 +11,7 @@ from nvidia.dali.plugin import pytorch
 
 from .pytorch_video_dataset import PytorchVideoDataset
 from .dali_video_dataloader import DALIVideoLoader
-# TODO: import bellow is broken, fix it
-import src.torch_utils.dataset.pytorch_video_transforms as transforms
+from .pytorch_video_transforms import Transforms
 
 
 class VideoDataloader(object):
@@ -33,7 +32,8 @@ class VideoDataloader(object):
             limit: If not None then at most that number of elements will be used
             load_data: If true then the videos will be loaded in RAM (when dali is set to False)
         """
-        self.dali = dali
+        self.dali: bool = dali
+        self.n_to_n: bool = model_config["n_to_n"]
         mode = "Train" if "Train" in data_path else "Validation"
 
         if dali:
@@ -46,24 +46,24 @@ class VideoDataloader(object):
         else:
             if mode == "Train":
                 data_transforms = Compose([
-                    transforms.RandomCrop(),
-                    transforms.Resize(*image_sizes),
-                    transforms.Normalize(),
-                    transforms.VerticalFlip(),
-                    transforms.HorizontalFlip(),
-                    transforms.Rotate180(),
-                    transforms.ReverseTime(),
-                    transforms.ToTensor(),
-                    transforms.Noise()
+                    Transforms.RandomCrop(),
+                    Transforms.Resize(*image_sizes),
+                    Transforms.Normalize(),
+                    Transforms.VerticalFlip(),
+                    Transforms.HorizontalFlip(),
+                    Transforms.Rotate180(),
+                    Transforms.ReverseTime(),
+                    Transforms.ToTensor(),
+                    Transforms.Noise()
                 ])
             else:
                 data_transforms = Compose([
-                    transforms.Resize(*image_sizes),
-                    transforms.Normalize(),
-                    transforms.ToTensor()
+                    Transforms.Resize(*image_sizes),
+                    Transforms.Normalize(),
+                    Transforms.ToTensor()
                 ])
 
-            dataset = PytorchVideoDataset(data_path, label_map, model_config["n_to_n"], model_config["sequence_length"],
+            dataset = PytorchVideoDataset(data_path, label_map, self.n_to_n, model_config["sequence_length"],
                                           model_config["grayscale"], image_sizes, transform=data_transforms,
                                           limit=limit, load_data=load_data)
             self.dataloader = torch.utils.data.DataLoader(dataset,
@@ -99,9 +99,10 @@ class DataIterator(object):
             print("\nDALI dataloading is broken, use the PyTorch one please")
             exit()
             # batch = batch[0]
-            # # TODO: temporary fix for n_to_n mode. Should not be done for n to 1 mode.
-            # batch["label"] = batch["label"].repeat(*batch["data"].shape[:2]).long()
-            # print(f"DALI labels: {batch['label']}")
+            # # Fix for n_to_n mode. Should not be done for n to 1 mode.
+            # if self.dataloader.n_to_n:
+            #     batch["label"] = batch["label"].repeat(*batch["data"].shape[:2]).long()
+            # # print(f"DALI labels: {batch['label']}")
             # return batch
         else:
             batch["data"] = batch["data"].to(self.device).float()

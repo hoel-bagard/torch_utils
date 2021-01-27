@@ -10,14 +10,10 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
-from ..dataset.build_video_dataloader import VideoDataloader
 
-
-# TODO: Change VideoDataloader to simple DataLoader and tweak the compute_confusion_matrix to make it
-# a general metrics class for any classification task
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: VideoDataloader,
-                 val_dataloader: VideoDataloader, label_map: Dict[int, str], n_to_n: bool,
+    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: torch.utils.data.Dataset,
+                 val_dataloader: torch.utils.data.Dataset, label_map: Dict[int, str], n_to_n: bool = False,
                  max_batches: Optional[int] = 10):
         """
         Class computing usefull metrics for classification tasks
@@ -27,8 +23,7 @@ class Metrics:
             train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
             val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
             label_map: Dictionary linking class index to class name
-            n_to_n: True if using one label for each element of the sequence
-            output_classes: Number of classes the network is classifying
+            n_to_n: Used when input is a sequence. True if using one label for each element of the sequence
             max_batches: If not None, then the metrics will be computed using at most this number of batches
         """
         self.model = model
@@ -38,7 +33,7 @@ class Metrics:
         self.val_dataloader = val_dataloader
         self.label_map = label_map
         self.n_to_n = n_to_n
-        self.output_classes = len(label_map)
+        self.nb_output_classes = len(label_map)
         self.max_batches = max_batches
 
     def compute_confusion_matrix(self, mode: str = "Train"):
@@ -47,18 +42,18 @@ class Metrics:
         Args:
             mode: Either "Train" or "Validation"
         """
-        self.cm = np.zeros((self.output_classes, self.output_classes))
+        self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
-            imgs, labels_batch = batch["data"].float(), batch["label"].cpu().detach().numpy()
-            predictions_batch = self.model(imgs.to(self.device))
+            data_batch, labels_batch = batch["data"].float(), batch["label"].cpu().detach().numpy()
+            predictions_batch = self.model(data_batch.to(self.device))
             predictions_batch = torch.argmax(predictions_batch, dim=-1).int().cpu().detach().numpy()
 
-            for (label_video, pred_video) in zip(labels_batch, predictions_batch):
+            for (label, pred) in zip(labels_batch, predictions_batch):
                 if self.n_to_n:
-                    for (label_frame, pred_frame) in zip(label_video, pred_video):
+                    for (label_frame, pred_frame) in zip(label, pred):
                         self.cm[label_frame, pred_frame] += 1
                 else:
-                    self.cm[label_video, pred_video] += 1
+                    self.cm[label, pred] += 1
 
             if self.max_batches and step >= self.max_batches:
                 break

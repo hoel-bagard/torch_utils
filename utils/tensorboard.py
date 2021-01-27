@@ -20,11 +20,10 @@ from .draw import (
 from .metrics import Metrics
 
 
-# TODO: Remove the LRCN references to make it into a general classification TensorBoard
 class TensorBoard():
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
                  sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int],
-                 n_to_n: bool = False, max_outputs: int = 4):
+                 n_to_n: bool = False, write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
         Args:
@@ -48,7 +47,7 @@ class TensorBoard():
 
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
-        if model.__class__.__name__ != "LRCN":
+        if write_graph:
             print("Adding TensorBoard to graph")
             self.train_tb_writer.add_graph(model, (torch.empty(2, sequence_length,
                                                                1 if gray_scale else 3,
@@ -63,7 +62,7 @@ class TensorBoard():
     def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader,
                      mode: str = "Train",  input_is_video: bool = "False",
                      preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
-                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None):
+                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None) -> None:
         """
         Writes images with predictions written on them to TensorBoard
         Args:
@@ -76,7 +75,6 @@ class TensorBoard():
         print("Writing images" + ' ' * (os.get_terminal_size()[0] - len("Writing images")), end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
-        # TODO: is iter needed ?
         batch = next(iter(dataloader))  # Get some data
 
         data, labels = batch["data"][:self.max_outputs].float(), batch["label"][:self.max_outputs]
