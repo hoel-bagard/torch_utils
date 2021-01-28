@@ -20,9 +20,9 @@ from .draw import (
 from .metrics import Metrics
 
 
-class TensorBoard():
+class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int],
+                 sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int], batch_size: int,
                  n_to_n: bool = False, write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
@@ -34,6 +34,7 @@ class TensorBoard():
             sequence_length: Number of elements in each sequence
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)
+            batch_size: Batch size, so that pre and postprocess functions can access it
             n_to_n: If using videos, is it N to 1 or N to N
             max_outputs: Number of images kept and dislpayed in TensorBoard
         """
@@ -60,9 +61,10 @@ class TensorBoard():
         self.val_tb_writer.close()
 
     def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader,
-                     mode: str = "Train",  input_is_video: bool = "False",
-                     preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
-                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None) -> None:
+                     mode: str = "Train", input_is_video: bool = "False",
+                     preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
+                     postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
+                                                       Tuple[Tensor, Tensor]]] = None) -> None:
         """
         Writes images with predictions written on them to TensorBoard
         Args:
@@ -79,18 +81,18 @@ class TensorBoard():
 
         data, labels = batch["data"][:self.max_outputs].float(), batch["label"][:self.max_outputs]
         if preprocess_fn:
-            data, labels = preprocess_fn(data, labels)
+            data, labels = preprocess_fn(self, data, labels)
 
         # Get some predictions
         predictions = self.model(data.to(self.device))
         data, predictions = data[:self.max_outputs], predictions[:self.max_outputs]  # Just in case (damn LSTM)
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
         if postprocess_fn:
-            data, predictions = postprocess_fn(data, predictions)
+            data, predictions = postprocess_fn(self, data, predictions)
 
         if input_is_video:
             # Keep only on frame per video (middle one)
-            frame_to_keep = labels.shape[1] // 2
+            frame_to_keep = data.shape[1] // 2
             imgs = data[:, frame_to_keep, :, :, :]
             if self.n_to_n:
                 predictions = predictions[:, frame_to_keep]
@@ -124,14 +126,14 @@ class TensorBoard():
 
         videos, labels = batch["data"][:1].float(), batch["label"][:1]
         if preprocess_fn:
-            videos, labels = preprocess_fn(videos, labels)
+            videos, labels = preprocess_fn(self, videos, labels)
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
         videos, predictions = videos[:1], predictions[:1]  # Just in case (damn LSTM)
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
         if postprocess_fn:
-            videos, predictions = postprocess_fn(videos, predictions)
+            videos, predictions = postprocess_fn(self, videos, predictions)
 
         # Write prediction on a video and add it to TensorBoard
         out_video = draw_pred_video(videos[0], predictions[0], labels[0], self.label_map, self.n_to_n)

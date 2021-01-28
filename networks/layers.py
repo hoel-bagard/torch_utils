@@ -4,6 +4,7 @@ from typing import (
     Optional
 )
 
+from einops import rearrange
 import torch
 import torch.nn as nn
 
@@ -88,4 +89,24 @@ class DarknetBlock(nn.Module):
         x = self.conv(inputs)
         for dark_res_block in self.dark_res_blocks:
             x = dark_res_block(x)
+        return x
+
+
+class Rearrange(nn.Module):
+    def __init__(self, pattern: str):
+        super().__init__()
+        if '(' in pattern or ')' in pattern:
+            self.permute = False
+            self.pattern = pattern
+        else:
+            self.permute = True
+            left_expr, right_expr = pattern.split(" -> ")
+            right_expr, left_expr = left_expr.split(), right_expr.split()
+            self.pattern = [right_expr.index(symbol) for symbol in left_expr]
+
+    def forward(self, x: torch.Tensor):
+        if self.permute:
+            x = x.permute(*self.pattern)
+        else:
+            x = rearrange(x, self.pattern)
         return x

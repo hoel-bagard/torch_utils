@@ -51,7 +51,7 @@ def n_to_1_loader(data_path: str, label_map: Dict[int, str], limit: Optional[int
                 data.append([np.asarray(video), key])
             else:
                 data.append([video_path, key])
-            if limit and i == limit:
+            if limit and len(data) == limit:
                 return np.asarray(data)
 
     return np.asarray(data)

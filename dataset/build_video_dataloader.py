@@ -11,7 +11,7 @@ from nvidia.dali.plugin import pytorch
 
 from .pytorch_video_dataset import PytorchVideoDataset
 from .dali_video_dataloader import DALIVideoLoader
-from .pytorch_video_transforms import Transforms
+from .pytorch_video_transforms import VideoTransforms
 
 
 class VideoDataloader(object):
@@ -46,27 +46,28 @@ class VideoDataloader(object):
         else:
             if mode == "Train":
                 data_transforms = Compose([
-                    Transforms.RandomCrop(),
-                    Transforms.Resize(*image_sizes),
-                    Transforms.Normalize(),
-                    Transforms.VerticalFlip(),
-                    Transforms.HorizontalFlip(),
-                    Transforms.Rotate180(),
-                    Transforms.ReverseTime(),
-                    Transforms.ToTensor(),
-                    Transforms.Noise()
+                    VideoTransforms.RandomCrop(),
+                    VideoTransforms.Resize(*image_sizes),
+                    VideoTransforms.Normalize(),
+                    VideoTransforms.VerticalFlip(),
+                    VideoTransforms.HorizontalFlip(),
+                    VideoTransforms.Rotate180(),
+                    VideoTransforms.ReverseTime(),
+                    VideoTransforms.ToTensor(),
+                    VideoTransforms.Noise()
                 ])
             else:
                 data_transforms = Compose([
-                    Transforms.Resize(*image_sizes),
-                    Transforms.Normalize(),
-                    Transforms.ToTensor()
+                    VideoTransforms.Resize(*image_sizes),
+                    VideoTransforms.Normalize(),
+                    VideoTransforms.ToTensor()
                 ])
 
-            dataset = PytorchVideoDataset(data_path, label_map, self.n_to_n, model_config["sequence_length"],
-                                          model_config["grayscale"], image_sizes, transform=data_transforms,
-                                          limit=limit, load_data=load_data)
-            self.dataloader = torch.utils.data.DataLoader(dataset,
+            self.dataset = PytorchVideoDataset(data_path, label_map, self.n_to_n, model_config["sequence_length"],
+                                               model_config["grayscale"], image_sizes, transform=data_transforms,
+                                               limit=limit, load_data=load_data)
+
+            self.dataloader = torch.utils.data.DataLoader(self.dataset,
                                                           batch_size=batch_size,
                                                           shuffle=(mode == "Train"),
                                                           num_workers=num_workers,
@@ -79,7 +80,7 @@ class VideoDataloader(object):
         return DataIterator(self)
 
     def __len__(self):
-        return len(self.dataloader)
+        return len(self.dataset)
 
 
 class DataIterator(object):
