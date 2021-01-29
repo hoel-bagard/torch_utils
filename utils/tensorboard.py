@@ -22,8 +22,9 @@ from .metrics import Metrics
 
 class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int], batch_size: int,
-                 n_to_n: bool = False, write_graph: bool = True, max_outputs: int = 4):
+                 gray_scale: bool, image_sizes: Tuple[int, int], batch_size: int,
+                 n_to_n: bool = False, sequence_length: Optional[int] = None,
+                 write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
         Args:
@@ -31,11 +32,11 @@ class TensorBoard:
             metrics: Instance of the Metrics class, used to compute classification metrics
             label_map: Dictionary linking class index to class name
             tb_dir: Path to where the tensorboard files will be saved
-            sequence_length: Number of elements in each sequence
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)
             batch_size: Batch size, so that pre and postprocess functions can access it
             n_to_n: If using videos, is it N to 1 or N to N
+            sequence_length: If using videos, Number of elements in each sequence
             max_outputs: Number of images kept and dislpayed in TensorBoard
         """
         super().__init__()
@@ -50,10 +51,13 @@ class TensorBoard:
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
         if write_graph:
             print("Adding TensorBoard to graph")
-            self.train_tb_writer.add_graph(model, (torch.empty(2, sequence_length,
-                                                               1 if gray_scale else 3,
-                                                               image_sizes[0], image_sizes[1],
-                                                               device=self.device), ))
+            if sequence_length:
+                dummy_input = (torch.empty(2, sequence_length, 1 if gray_scale else 3,
+                                           image_sizes[0], image_sizes[1], device=self.device), )
+            else:
+                dummy_input = (torch.empty(2, 1 if gray_scale else 3,
+                                           image_sizes[0], image_sizes[1], device=self.device), )
+            self.train_tb_writer.add_graph(model, dummy_input)
             self.train_tb_writer.flush()
 
     def close_writers(self) -> None:
