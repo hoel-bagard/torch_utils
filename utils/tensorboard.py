@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import (
     Tuple,
     Dict,
@@ -78,7 +79,8 @@ class TensorBoard:
             preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
             postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
-        print("Writing images" + ' ' * (os.get_terminal_size()[0] - len("Writing images")), end="\r", flush=True)
+        msg = "Writing images"
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
         batch = next(iter(dataloader))  # Get some data
@@ -123,7 +125,8 @@ class TensorBoard:
             preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
             postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
-        print("Writing videos" + ' ' * (os.get_terminal_size()[0] - len("Writing videos")), end="\r", flush=True)
+        print("Writing videos" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len("Writing videos")),
+              end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
         batch = next(iter(dataloader))  # Get some data
@@ -155,20 +158,24 @@ class TensorBoard:
         Returns:
             avg_acc: Average accuracy
         """
-        print("Computing confusion matrix" + ' ' * (os.get_terminal_size()[0] - 26), end="\r", flush=True)
+        print("Computing confusion matrix" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 26),
+              end="\r", flush=True)
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         self.metrics.compute_confusion_matrix(mode=mode)
 
-        print("Computing average accuracy" + ' ' * (os.get_terminal_size()[0] - 26), end="\r", flush=True)
+        print("Computing average accuracy" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 26),
+              end="\r", flush=True)
         avg_acc = self.metrics.get_avg_acc()
         tb_writer.add_scalar("Average Accuracy", avg_acc, epoch)
 
-        print("Computing per class accuracy" + ' ' * (os.get_terminal_size()[0] - 28), end="\r", flush=True)
+        print("Computing per class accuracy" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 28),
+              end="\r", flush=True)
         per_class_acc = self.metrics.get_class_accuracy()
         for key, acc in enumerate(per_class_acc):
             tb_writer.add_scalar(f"Per Class Accuracy/{self.label_map[key]}", acc, epoch)
 
-        print("Creating confusion matrix image" + ' ' * (os.get_terminal_size()[0] - 31), end="\r", flush=True)
+        print("Creating confusion matrix image" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 31),
+              end="\r", flush=True)
         confusion_matrix = self.metrics.get_confusion_matrix()
         tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch, dataformats="HWC")
 

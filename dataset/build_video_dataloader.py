@@ -1,4 +1,4 @@
-import os
+import shutil
 from typing import (
     Dict,
     Tuple,
@@ -74,7 +74,7 @@ class VideoDataloader(object):
                                                           drop_last=drop_last)
 
         msg = f"{mode} data loaded"
-        print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)))
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)))
 
     def __iter__(self):
         return DataIterator(self)

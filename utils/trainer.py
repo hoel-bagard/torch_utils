@@ -1,4 +1,4 @@
-import os
+import shutil
 import time
 from typing import (
     Callable,
@@ -88,7 +88,7 @@ class Trainer:
         pre_string = f"{step}/{max_steps} ["
         post_string = (f"],  Loss: {loss.item():.3e}  -  Step time: {step_time:.2f}ms"
                        f"  -  Fetch time: {fetch_time:.2f}ms    ")
-        terminal_cols = os.get_terminal_size().columns
+        terminal_cols = shutil.get_terminal_size(fallback=(156, 38)).columns
         progress_bar_len = min(terminal_cols - len(pre_string) - len(post_string)-1, 30)
         epoch_progress = int(progress_bar_len * (step/max_steps))
         print(pre_string + f"{epoch_progress*'='}>{(progress_bar_len-epoch_progress)*'.'}" + post_string,

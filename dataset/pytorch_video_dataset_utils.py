@@ -1,6 +1,7 @@
 import os
 import glob
 import json
+import shutil
 from typing import (
     Dict,
     Optional
@@ -32,7 +33,7 @@ def n_to_1_loader(data_path: str, label_map: Dict[int, str], limit: Optional[int
         [video_paths.extend(glob.glob(os.path.join(pathname, ext), recursive=True)) for ext in file_types]
         for i, video_path in enumerate(video_paths):
             msg = f"Loading data {video_path}    ({i}/{len(video_paths)}) for class {label_map[key]}"
-            print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
+            print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
             if load_videos:
                 cap = cv2.VideoCapture(video_path)
                 video = []
@@ -119,7 +120,7 @@ def n_to_n_loader(data_path: str, label_map: Dict[int, str], limit: Optional[int
     for i, label in enumerate(labels, start=1):
         video_path = os.path.join(data_path, label["file_path"])
         msg = f"Loading data {video_path}    ({i}/{nb_labels})"
-        print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
         assert os.path.isfile(video_path), f"Video {video_path} is missing"
         cap = cv2.VideoCapture(video_path)

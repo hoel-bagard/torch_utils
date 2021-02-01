@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import tempfile
 from typing import (
     Dict,
@@ -49,7 +50,7 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
     for i, label in enumerate(labels, start=1):
         video_path = os.path.join(data_path, label["file_path"])
         msg = f"Loading data {video_path}    ({i}/{nb_labels})"
-        print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
         assert os.path.isfile(video_path), f"Video {video_path} is missing"
         cap = cv2.VideoCapture(video_path)  # Use ffprobe instead ?
