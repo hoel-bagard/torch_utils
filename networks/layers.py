@@ -51,12 +51,12 @@ class Conv2D(Layer):
 
 
 class Conv3D(Layer):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
-                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple[int, int, int]] = 3,
+                 stride: Union[int, Tuple[int, int, int]] = 1, padding: Union[int, Tuple[int, int, int]] = 0,
                  activation=0, use_batch_norm: bool = None, **kwargs):
         super().__init__(activation, use_batch_norm)
 
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride,
+        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
                               bias=not self.use_batch_norm, **kwargs)
         self.batch_norm = nn.BatchNorm3d(
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,

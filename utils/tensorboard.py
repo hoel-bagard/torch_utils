@@ -51,7 +51,7 @@ class TensorBoard:
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
         if write_graph:
-            print("Adding TensorBoard to graph")
+            print("Adding network graph to TensorBoard")
             if sequence_length:
                 dummy_input = (torch.empty(2, sequence_length, 1 if gray_scale else 3,
                                            image_sizes[0], image_sizes[1], device=self.device), )
@@ -66,7 +66,7 @@ class TensorBoard:
         self.val_tb_writer.close()
 
     def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader,
-                     mode: str = "Train", input_is_video: bool = "False",
+                     mode: str = "Train", input_is_video: bool = False,
                      preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
                                                        Tuple[Tensor, Tensor]]] = None) -> None:

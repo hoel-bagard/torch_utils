@@ -14,8 +14,7 @@ class TransformerLayer(nn.Module):
             nhead: Number of heads in the multi-head attention layers
             dim_feedforward: Dimension of the FFN model in the encoder layers
         """
-        super(TransformerLayer, self).__init__()
-        # self.model_type = 'Transformer'
+        super().__init__()
         self.pos_encoder = PositionalEncoding(input_size, dropout)
         encoder_layers = nn.TransformerEncoderLayer(input_size, nhead, dim_feedforward, dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, nlayers)
@@ -37,7 +36,7 @@ class TransformerLayer(nn.Module):
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=1000):
-        super(PositionalEncoding, self).__init__()
+        super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
         pe = torch.zeros(max_len, d_model)
