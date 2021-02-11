@@ -12,4 +12,4 @@ def clean_print(msg: str, fallback: Optional[Tuple[int, int]] = (156, 38), end='
         msg: String to print to the console
         fallback: Size of the terminal to use if it cannot be determined by shutil (if using windows for example)
     """
-    print(msg + ' ' * (get_terminal_size(fallback=fallback).columns - len(msg)), end=end)
+    print(msg + ' ' * (get_terminal_size(fallback=fallback).columns - len(msg)), end=end, flush=True)

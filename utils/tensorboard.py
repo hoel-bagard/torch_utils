@@ -19,6 +19,7 @@ from .draw import (
     draw_pred_video
 )
 from .metrics import Metrics
+from .misc import clean_print
 
 
 class TensorBoard:
@@ -79,8 +80,7 @@ class TensorBoard:
             preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
             postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
-        msg = "Writing images"
-        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r", flush=True)
+        clean_print("Writing images", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
         batch = next(iter(dataloader))  # Get some data
@@ -125,8 +125,7 @@ class TensorBoard:
             preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
             postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
         """
-        print("Writing videos" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len("Writing videos")),
-              end="\r", flush=True)
+        clean_print("Writing videos", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
         batch = next(iter(dataloader))  # Get some data
@@ -149,33 +148,34 @@ class TensorBoard:
 
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
-    def write_metrics(self, epoch: int, mode: str = "Train") -> float:
+    def write_metrics(self, epoch: int, mode: str = "Train", write_defect_acc: bool = False) -> float:
         """
         Writes accuracy metrics in TensorBoard
         Args:
             epoch: Current epoch
             mode: Either "Train" or "Validation"
+            write_defect_acc: If doing defect detection, this expect the "good" class to be 0
         Returns:
             avg_acc: Average accuracy
         """
-        print("Computing confusion matrix" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 26),
-              end="\r", flush=True)
+        clean_print("Computing confusion matrix", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         self.metrics.compute_confusion_matrix(mode=mode)
 
-        print("Computing average accuracy" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 26),
-              end="\r", flush=True)
+        clean_print("Computing average accuracy", end="\r")
         avg_acc = self.metrics.get_avg_acc()
         tb_writer.add_scalar("Average Accuracy", avg_acc, epoch)
 
-        print("Computing per class accuracy" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 28),
-              end="\r", flush=True)
+        clean_print("Computing per class accuracy", end="\r")
         per_class_acc = self.metrics.get_class_accuracy()
         for key, acc in enumerate(per_class_acc):
             tb_writer.add_scalar(f"Per Class Accuracy/{self.label_map[key]}", acc, epoch)
 
-        print("Creating confusion matrix image" + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - 31),
-              end="\r", flush=True)
+        if write_defect_acc:
+            acc = self.metrics.get_group_accuracy()
+            tb_writer.add_scalar("Defect accuracy", acc, epoch)
+
+        clean_print("Creating confusion matrix image", end="\r")
         confusion_matrix = self.metrics.get_confusion_matrix()
         tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch, dataformats="HWC")
 

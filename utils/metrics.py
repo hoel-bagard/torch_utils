@@ -76,6 +76,24 @@ class Metrics:
         per_class_acc = [self.cm[i, i] / max(1, np.sum(self.cm[i])) for i in range(len(self.cm))]
         return per_class_acc
 
+    def get_group_accuracy(self, classes: Optional[list[int]] = None) -> float:
+        """
+        Uses the confusion matrix to return the accuracy for the given classes vs the all the others.
+        Args:
+            classes: List with the classes that should be grouped together
+        Returns:
+            acc: accuracy for the given group
+        """
+        if not classes:
+            classes = np.arange(1, self.nb_output_classes)
+        correct = 0
+        total = 0
+        for cls in classes:
+            correct += self.cm[cls, cls]
+            total += np.sum(self.cm[cls])
+        acc = correct / max(1, total)
+        return acc
+
     def get_confusion_matrix(self) -> np.ndarray:
         """
         Returns an image containing the plotted confusion matrix.
