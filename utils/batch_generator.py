@@ -1,0 +1,340 @@
+from argparse import ArgumentParser
+import multiprocessing as mp
+from multiprocessing import shared_memory
+from typing import (
+    Callable,
+    Optional,
+    Final,
+    Any
+)
+from itertools import product
+from time import (
+    time,
+    # sleep
+)
+from math import ceil
+
+import numpy as np
+
+
+class BatchGenerator:
+    def __init__(self, data: np.ndarray, labels: np.ndarray, batch_size: int,
+                 nb_workers: int = 1,
+                 data_preprocessing_fn: Optional[Callable[[np.ndarray], Any]] = None,
+                 labels_preprocessing_fn: Optional[Callable[[np.ndarray], Any]] = None,
+                 shuffle: bool = False, verbose: bool = False):
+        """
+        Args:
+            data: Numpy array with the data. It can be be only path to the datapoints to load (or other forms of data)
+                  if the loading function is given as data_preprocessing_fn.
+            labels: Numpy array with the labels, as for data it can be not yet fully ready labels.
+            nb_workers: Number of workers to use for multiprocessing (>=1).
+            data_preprocessing_fn: If not None, data will be passed through this function.
+            labels_preprocessing_fn: If not None, labels will be passed through this function.
+            shuffle: If True, then dataset is shuffled for each epoch
+            verbose: If true then the BatchGenerator will print debug information
+        """
+        self.verbose: Final[bool] = verbose
+
+        self.data: Final[np.ndarray] = data
+        self.labels: Final[np.ndarray] = labels
+
+        self.batch_size: Final[int] = batch_size
+        self.shuffle: Final[bool] = shuffle
+        self.nb_workers: Final[int] = nb_workers
+        self.data_preprocessing_fn = data_preprocessing_fn
+        self.labels_preprocessing_fn = labels_preprocessing_fn
+
+        # TODOLIST
+        # TODO: Add possibility to save dataset as hdf5
+        # TODO: Add possibility to drop last batch
+        # TODO: Have the prefetch in a workers
+        # TODO: Catch ctrl-c to allow pressing it twice (once to send stop signal and 2 to kill everything)
+
+        self.nb_datapoints: Final[int] = len(self.data)
+
+        index_list: np.ndarray = np.arange(self.nb_datapoints)
+        if self.shuffle:
+            np.random.shuffle(index_list)
+        data_batch: np.ndarray = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
+                                             for entry in data[:batch_size]])
+        labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if data_preprocessing_fn else entry
+                                               for entry in labels[:batch_size]])
+
+        self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
+        self.last_batch_size = self.nb_datapoints % self.batch_size
+        if self.last_batch_size == 0:
+            self.last_batch_size = self.batch_size
+        self.current_batch_size = self.batch_size
+
+        self.epoch = 0
+        self.global_step = 0
+        self.step = 0
+
+        # Create shared memories for indices, data and labels.
+        self.memories_released = mp.Event()   # TODO: change that to a boolean
+        # For data and labels, 2 memories / caches are required for prefetch to work.
+        # (One for the main process to read from, one for the workers to write in)
+        self._current_cache = 0
+        # Indices
+        self._cache_memory_indices = shared_memory.SharedMemory(create=True, size=index_list.nbytes)
+        self._cache_indices = np.ndarray(self.nb_datapoints, dtype=int, buffer=self._cache_memory_indices.buf)
+        self._cache_indices[:] = index_list
+        # Data
+        self._cache_memory_data = [
+            shared_memory.SharedMemory(create=True, size=data_batch.nbytes),
+            shared_memory.SharedMemory(create=True, size=data_batch.nbytes)]
+        self._cache_data = [
+            np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[0].buf),
+            np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[1].buf)]
+        # Labels
+        self._cache_memory_labels = [
+            shared_memory.SharedMemory(create=True, size=labels_batch.nbytes),
+            shared_memory.SharedMemory(create=True, size=labels_batch.nbytes)]
+        self._cache_labels = [
+            np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[0].buf),
+            np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[1].buf)]
+
+        # Create workers
+        self._process_id = "NA"
+        self._init_workers()
+        self._prefetch_batch()
+        self._process_id = "main"
+
+    def _init_workers(self):
+        """Create workers and pipes / events used to communicate with them"""
+        self.stop_event = mp.Event()
+        self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
+        self.worker_processes = []
+        for worker_index in range(self.nb_workers):
+            self.worker_processes.append(mp.Process(target=self._worker_fn, args=(worker_index,)))
+            self.worker_processes[-1].start()
+
+    def _worker_fn(self, worker_index: int):
+        """ Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory"""
+        self._process_id = f"worker_{worker_index}"
+        pipe = self.worker_pipes[worker_index][1]
+
+        while not self.stop_event.is_set():
+            try:
+                # Check if there is a message to be received. (prevents process from getting stuck)
+                if pipe.poll(0.05):
+                    current_cache, cache_start_index, indices_start_index, nb_elts = pipe.recv()
+                    # If the worker is in excess, then it has nothing to do (small last batch for exemple)
+                    if nb_elts == 0:
+                        pipe.send(True)
+                        continue
+                else:
+                    continue
+
+                indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
+
+                # Get the data (and process it)
+                if self.data_preprocessing_fn:
+                    processed_data = self.data_preprocessing_fn(self.data[indices_to_process])
+                else:
+                    processed_data = self.data[indices_to_process]
+                # Put the data into the shared memory
+                self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
+
+                # Do the same for labels
+                if self.labels_preprocessing_fn:
+                    processed_labels = self.labels_preprocessing_fn(self.labels[indices_to_process])
+                else:
+                    processed_labels = self.labels[indices_to_process]
+                self._cache_labels[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_labels
+
+                # Send signal to the main process to say that everything is ready
+                pipe.send(True)
+            except (KeyboardInterrupt, ValueError):
+                break
+
+    def _prefetch_batch(self):
+        """ Start sending intructions to workers to load the next batch while the previous one is being used """
+        # Prefetch step is one step ahead of the actual one
+        if self.step < self.step_per_epoch:
+            step = (self.step + 1)
+        else:
+            step = 1
+            # Here is the true beginning of the new epoch as far as data preparation is concerned, hence the shuffle
+            if self.shuffle:
+                np.random.shuffle(self._cache_indices)
+
+        # Prepare arguments for workers and send them
+        prefetch_batch_size = self.batch_size if step != self.step_per_epoch else self.last_batch_size
+        prefetch_cache = 1 - self._current_cache
+        nb_workers = min(self.nb_workers, prefetch_batch_size)  # Do not use all the workers if the batch size is small
+        nb_elts_per_worker = prefetch_batch_size // nb_workers
+        for worker_idx in range(self.nb_workers):
+            if worker_idx < nb_workers:
+                cache_start_index = worker_idx * nb_elts_per_worker
+                indices_start_index = (step-1) * self.batch_size + cache_start_index
+                nb_elts = nb_elts_per_worker if worker_idx != (nb_workers-1) else ceil(prefetch_batch_size / nb_workers)
+                self.worker_pipes[worker_idx][0].send((prefetch_cache, cache_start_index, indices_start_index, nb_elts))
+            else:
+                # Send empty instructions to excess workers
+                self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
+
+    def next_batch(self):
+        """
+        Returns a batch of data, goes to the next epoch when the previous one is finished.
+        Does not raise a StopIteration, looping using this function means the loop will never stop.
+        """
+        # Check if the current epoch is finished. If it is then start a new one.
+        if self.step >= self.step_per_epoch:
+            self._next_epoch()
+
+        self.global_step += 1
+        self.step += 1   # Steps start at 1
+
+        # Wait for every worker to have finished preparing its mini-batch
+        for pipe, _ in self.worker_pipes:
+            pipe.recv()
+
+        self.current_batch_size = self.batch_size if self.step != self.step_per_epoch else self.last_batch_size
+        self._current_cache = (self._current_cache+1) % 2
+        data_batch = self._cache_data[self._current_cache][:self.current_batch_size]
+        labels_batch = self._cache_labels[self._current_cache][:self.current_batch_size]
+
+        # Start prefetching the next batch
+        self._prefetch_batch()
+
+        return data_batch, labels_batch
+
+    def _next_epoch(self):
+        """Prepares variables for the next epoch"""
+        self.epoch += 1
+        self.step = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.step < self.step_per_epoch:
+            return self.next_batch()
+        else:
+            self._next_epoch()
+            raise StopIteration
+
+    def __del__(self):
+        self.release()
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        self.release()
+
+    def __enter__(self):
+        return self
+
+    def release(self):
+        """Terminates all workers and releases all the shared ressources"""
+        # Closes acces to the shared memories
+        for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
+            shared_mem.close()
+
+        if self._process_id == "main":
+            self.stop_event.set()   # Sends signal to stop to all the workers
+
+            # Terminates all the workers
+            end_time = time() + 5  # Maximum waiting time (for all processes)
+            for pipe, worker in zip(self.worker_pipes, self.worker_processes):
+                pipe[0].close()
+                worker.join(timeout=max(0.0, end_time - time()))
+                self.worker_pipes.remove(pipe)
+                self.worker_processes.remove(worker)
+
+            if not self.memories_released.is_set():
+                # Requests for all the shared memories to be destroyed
+                if self.verbose:
+                    print("Releasing shared memories")
+                for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
+                    shared_mem.unlink()
+                self.memories_released.set()
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser("BatchGenerator Test script")
+    parser.add_argument("--verbose", "--v", action="store_true", help="Verbose mode")
+    args = parser.parse_args()
+
+    verbose = args.verbose
+
+    def test():
+        """Function used to run tests on the BatchGenerator"""
+        # Prepare mock dataset
+        nb_datapoints = 18
+        data = np.arange(nb_datapoints)
+        labels = np.arange(nb_datapoints) / 10
+
+        # Prepare variables to test against
+        workers = [1, 2, 5]
+        batch_sizes = [5]
+        data_preprocessing_fns = [None]
+        labels_preprocessing_fns = [None]
+
+        # Put all the variables into a list, then use itertools to get all the possible combinations
+        args_lists = [workers, batch_sizes, data_preprocessing_fns, labels_preprocessing_fns]
+        for args in product(*args_lists):
+            nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
+
+            if verbose:
+                print(f'{nb_workers=}')
+
+            # Preprocess data and labels here to do it only once
+            processed_data = data_preprocessing_fn(data) if data_preprocessing_fn else data
+            processed_labels = labels_preprocessing_fn(labels) if labels_preprocessing_fn else labels
+
+            # Prepare some variables used for testing
+            step_per_epoch = (nb_datapoints + (batch_size-1)) // batch_size
+            last_batch_size = nb_datapoints % batch_size if nb_datapoints % batch_size else batch_size
+            global_step = 0
+
+            with BatchGenerator(data, labels, batch_size, data_preprocessing_fn=data_preprocessing_fn,
+                                nb_workers=nb_workers, shuffle=True) as batch_generator:
+                for epoch in range(5):
+                    # Variables used to aggregate dataset
+                    agg_data = []
+                    agg_labels = []
+
+                    for step, (data_batch, labels_batch) in enumerate(batch_generator, start=1):
+                        global_step += 1
+                        agg_data += list(data_batch)
+                        agg_labels += list(labels_batch)
+
+                        if verbose:
+                            print(f"{batch_generator.epoch=}, {batch_generator.step=}")
+                            print(f"{data_batch=}, {labels_batch=}")
+
+                        # Check that variables are what they should be
+                        assert global_step == batch_generator.global_step, (
+                            f"Global step is {batch_generator.global_step} but should be {global_step}")
+                        expected_epoch = (global_step-1) // step_per_epoch
+                        assert batch_generator.epoch == expected_epoch, (
+                            f"Epoch is {batch_generator.epoch} but should be {expected_epoch}")
+                        assert step == batch_generator.step, (
+                            f"Step is {batch_generator.step} but should be {step}")
+
+                        # Check that length  of each batch is as expected
+                        assert len(data_batch) == len(labels_batch), "Data and labels' shapes are different"
+                        if step != step_per_epoch:
+                            assert len(data_batch) == batch_size, (
+                                f"Batch size is {len(data_batch)} but should be {batch_size}")
+                        else:
+                            assert len(data_batch) == last_batch_size, (
+                                f"Batch size is {len(data_batch)} but should be {last_batch_size}")
+
+                        # Check that labels correspond to datapoints
+                        for data_point, label in zip(data_batch, labels_batch):
+                            original_index = np.where(processed_data == data_point)[0][0]
+                            assert processed_labels[original_index] == label, (
+                                f"Expected label for {data_point} to be {processed_labels[original_index]}",
+                                f"but got {label}.")
+
+                    # Check that all elements appeared (once) during the epoch
+                    assert len(agg_data) == nb_datapoints, (
+                        f"{len(agg_data)} elements appeared instead of {nb_datapoints}")
+                    assert set(agg_data) == set(processed_data), (
+                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}")
+                    assert set(agg_labels) == set(processed_labels), (
+                        f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
+
+    test()
