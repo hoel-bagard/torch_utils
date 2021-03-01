@@ -1,5 +1,4 @@
 import os
-import shutil
 from typing import (
     Tuple,
     Dict,
@@ -24,8 +23,8 @@ from .misc import clean_print
 
 class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 gray_scale: bool, image_sizes: Tuple[int, int], batch_size: int,
-                 n_to_n: bool = False, sequence_length: Optional[int] = None,
+                 image_sizes: Tuple[int, int],
+                 gray_scale: bool = False, n_to_n: bool = False, sequence_length: Optional[int] = None,
                  write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
@@ -36,7 +35,6 @@ class TensorBoard:
             tb_dir: Path to where the tensorboard files will be saved
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)
-            batch_size: Batch size, so that pre and postprocess functions can access it
             n_to_n: If using videos, is it N to 1 or N to N
             sequence_length: If using videos, Number of elements in each sequence
             max_outputs: Number of images kept and dislpayed in TensorBoard

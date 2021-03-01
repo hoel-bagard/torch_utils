@@ -7,11 +7,12 @@ from typing import (
 
 import torch
 
+from .batch_generator import BatchGenerator
+
 
 class Trainer:
-    def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module,
-                 train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader,
-                 batch_size: int, optimizer: torch.optim.Optimizer,
+    def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer,
+                 train_dataloader: BatchGenerator, val_dataloader: BatchGenerator,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """
         Trainer class that handles training and validation epochs
@@ -21,7 +22,6 @@ class Trainer:
             train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
             val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
             optimizer: Optimizer to use
-            model_name: LRCN if using an LSTM (reset the state at each step)
             on_epoch_begin: function that will be called at the beginning of every epoch.
         """
         self.model = model
@@ -29,13 +29,12 @@ class Trainer:
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        # TODO: get get batchsize from the dataloader (require a dataloader wrapper that does videos, images, etc...)
-        self.batch_size = batch_size
+        self.batch_size = train_dataloader.batch_size
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove hardcoded 0 ?
 
-        self.train_steps_per_epoch = (len(train_dataloader) + (batch_size - 1)) // batch_size
-        self.val_steps_per_epoch = (len(val_dataloader) + (batch_size - 1)) // batch_size
+        self.train_steps_per_epoch = (len(train_dataloader) + (self.batch_size - 1)) // self.batch_size
+        self.val_steps_per_epoch = (len(val_dataloader) + (self.batch_size - 1)) // self.batch_size
 
     def epoch_loop(self, train: bool = True):
         """
@@ -49,13 +48,12 @@ class Trainer:
         steps_per_epoch = self.train_steps_per_epoch if train else self.val_steps_per_epoch
         step_time, fetch_time = None, None
         step_start_time = time.perf_counter()  # Needs to be outside the loop to include dataloading
-        for step, batch in enumerate(data_loader, start=1):
+        for step, (inputs, labels) in enumerate(data_loader, start=1):
             data_loading_finished_time = time.perf_counter()
             self.optimizer.zero_grad()
             if self.on_epoch_begin:
                 self.on_epoch_begin(self)
 
-            inputs, labels = batch["data"], batch["label"]
             outputs = self.model(inputs)
             loss = self.loss_fn(outputs, labels)
             if train:

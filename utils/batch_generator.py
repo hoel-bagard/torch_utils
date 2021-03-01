@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import multiprocessing as mp
 from multiprocessing import shared_memory
+from pathlib import Path
 from typing import (
     Callable,
     Optional,
@@ -15,13 +16,16 @@ from time import (
 from math import ceil
 
 import numpy as np
+from torch import Tensor
 
 
 class BatchGenerator:
     def __init__(self, data: np.ndarray, labels: np.ndarray, batch_size: int,
                  nb_workers: int = 1,
-                 data_preprocessing_fn: Optional[Callable[[np.ndarray], Any]] = None,
-                 labels_preprocessing_fn: Optional[Callable[[np.ndarray], Any]] = None,
+                 data_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
+                 labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
+                 aug_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
+                 gpu_augmentation_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
                  shuffle: bool = False, verbose: bool = False):
         """
         Args:
@@ -29,9 +33,12 @@ class BatchGenerator:
                   if the loading function is given as data_preprocessing_fn.
             labels: Numpy array with the labels, as for data it can be not yet fully ready labels.
             nb_workers: Number of workers to use for multiprocessing (>=1).
-            data_preprocessing_fn: If not None, data will be passed through this function.
-            labels_preprocessing_fn: If not None, labels will be passed through this function.
-            shuffle: If True, then dataset is shuffled for each epoch
+            data_preprocessing_fn: If not None, data is expected to be paths that will be passed through this function.
+            labels_preprocessing_fn: If not None, labels is should be paths that will be passed through this function.
+            aug_pipeline: Function that takes in data and labels and do some data augmentation on them (on cpu, numpy)
+            gpu_augmentation_pipeline: Function that takes in data and labels and do some data augmentation on them.
+                                       Should start by transforming numpy arrays into torch Tensors.
+        shuffle: If True, then dataset is shuffled for each epoch
             verbose: If true then the BatchGenerator will print debug information
         """
         self.verbose: Final[bool] = verbose
@@ -44,6 +51,8 @@ class BatchGenerator:
         self.nb_workers: Final[int] = nb_workers
         self.data_preprocessing_fn = data_preprocessing_fn
         self.labels_preprocessing_fn = labels_preprocessing_fn
+        self.augmentation_pipeline = aug_pipeline
+        self.gpu_augmentation_pipeline = gpu_augmentation_pipeline
 
         # TODOLIST
         # TODO: Add possibility to save dataset as hdf5
@@ -56,10 +65,14 @@ class BatchGenerator:
         index_list: np.ndarray = np.arange(self.nb_datapoints)
         if self.shuffle:
             np.random.shuffle(index_list)
+
+        # Prepare a batch of data to know its size and shape
         data_batch: np.ndarray = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
                                              for entry in data[:batch_size]])
         labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if data_preprocessing_fn else entry
                                                for entry in labels[:batch_size]])
+        if self.augmentation_pipeline:
+            data_batch, labels_batch = self.augmentation_pipeline(data_batch, labels_batch)
 
         self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
@@ -134,14 +147,19 @@ class BatchGenerator:
                     processed_data = self.data_preprocessing_fn(self.data[indices_to_process])
                 else:
                     processed_data = self.data[indices_to_process]
-                # Put the data into the shared memory
-                self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
 
                 # Do the same for labels
                 if self.labels_preprocessing_fn:
                     processed_labels = self.labels_preprocessing_fn(self.labels[indices_to_process])
                 else:
                     processed_labels = self.labels[indices_to_process]
+
+                # Do data augmentation if required
+                if self.augmentation_pipeline:
+                    processed_data, processed_labels = self.augmentation_pipeline(processed_data, processed_labels)
+
+                # Put the mini-batch into the shared memory
+                self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
                 self._cache_labels[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_labels
 
                 # Send signal to the main process to say that everything is ready
@@ -199,6 +217,10 @@ class BatchGenerator:
         # Start prefetching the next batch
         self._prefetch_batch()
 
+        # Transform data to tensor on gpu and do some data augmentation if needed
+        if self.gpu_augmentation_pipeline:
+            data_batch, labels_batch = self.gpu_augmentation_pipeline(data_batch, labels_batch)
+
         return data_batch, labels_batch
 
     def _next_epoch(self):
@@ -224,6 +246,9 @@ class BatchGenerator:
 
     def __enter__(self):
         return self
+
+    def __len__(self):
+        return self.nb_datapoints
 
     def release(self):
         """Terminates all workers and releases all the shared ressources"""
