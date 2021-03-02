@@ -69,7 +69,7 @@ class BatchGenerator:
         # Prepare a batch of data to know its size and shape
         data_batch: np.ndarray = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
                                              for entry in data[:batch_size]])
-        labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if data_preprocessing_fn else entry
+        labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                                for entry in labels[:batch_size]])
         if self.augmentation_pipeline:
             data_batch, labels_batch = self.augmentation_pipeline(data_batch, labels_batch)
