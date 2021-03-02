@@ -10,21 +10,24 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
+from .batch_generator import BatchGenerator
+
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: torch.utils.data.Dataset,
-                 val_dataloader: torch.utils.data.Dataset, label_map: Dict[int, str], n_to_n: bool = False,
-                 max_batches: Optional[int] = 10):
+    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: BatchGenerator,
+                 val_dataloader: BatchGenerator, label_map: Dict[int, str], max_batches: Optional[int] = 10,
+                 n_to_n: bool = False, segmentation: bool = False):
         """
         Class computing usefull metrics for classification tasks
         Args:
             model: The PyTorch model being trained
             loss_fn: Function used to compute the loss of the model
-            train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
-            val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
+            train_dataloader: DataLoader containing train data
+            val_dataloader: DataLoader containing validation data
             label_map: Dictionary linking class index to class name
-            n_to_n: Used when input is a sequence. True if using one label for each element of the sequence
             max_batches: If not None, then the metrics will be computed using at most this number of batches
+            n_to_n: Used when input is a sequence. True if using one label for each element of the sequence
+            segmentation: Used when doing segmentation.
         """
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,6 +36,7 @@ class Metrics:
         self.val_dataloader = val_dataloader
         self.label_map = label_map
         self.n_to_n = n_to_n
+        self.segmentation = segmentation
         self.nb_output_classes = len(label_map)
         self.max_batches = max_batches
 
@@ -44,16 +48,21 @@ class Metrics:
         """
         self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
-            data_batch, labels_batch = batch["data"].float(), batch["label"].cpu().detach().numpy()
+            data_batch, labels_batch = batch[0].float(), batch[1].cpu().detach().numpy()
             predictions_batch = self.model(data_batch.to(self.device))
-            predictions_batch = torch.argmax(predictions_batch, dim=-1).int().cpu().detach().numpy()
 
-            for (label, pred) in zip(labels_batch, predictions_batch):
-                if self.n_to_n:
-                    for (label_frame, pred_frame) in zip(label, pred):
-                        self.cm[label_frame, pred_frame] += 1
+            if not self.segmentation:
+                predictions_batch = torch.argmax(predictions_batch, dim=-1).int().cpu().detach().numpy()
+                for (label, pred) in zip(labels_batch, predictions_batch):
+                    if self.n_to_n:
+                        for (label_frame, pred_frame) in zip(label, pred):
+                            self.cm[label_frame, pred_frame] += 1
+                    else:
+                        self.cm[label, pred] += 1
                 else:
-                    self.cm[label, pred] += 1
+                    predictions_batch = predictions_batch.int().cpu().detach().numpy()
+                    for (label_pixel, pred_pixel) in zip(labels_batch.flatten(), predictions_batch.flatten()):
+                        self.cm[label_pixel, pred_pixel] += 1
 
             if self.max_batches and step >= self.max_batches:
                 break
@@ -93,6 +102,17 @@ class Metrics:
             total += np.sum(self.cm[cls])
         acc = correct / max(1, total)
         return acc
+
+    def get_class_iou(self) -> float:
+        """
+        Uses the confusion matrix to return the iou for each class
+        Returns:
+            avg_acc: Average accuracy
+        """
+        intersections = [self.cm[i, i] for i in range(len(self.cm))]
+        unions = [np.sum(self.cm[i, :]) + np.sum(self.cm[:, i]) - self.cm[i, i] for i in range(self.nb_output_classes)]
+        per_class_iou = [intersections[i] / unions[i] for i in range(self.nb_output_classes)]
+        return per_class_iou
 
     def get_confusion_matrix(self) -> np.ndarray:
         """

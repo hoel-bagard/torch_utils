@@ -23,8 +23,8 @@ from .misc import clean_print
 
 class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 image_sizes: Tuple[int, int],
-                 gray_scale: bool = False, n_to_n: bool = False, sequence_length: Optional[int] = None,
+                 image_sizes: Tuple[int, int], gray_scale: bool = False,
+                 n_to_n: bool = False, sequence_length: Optional[int] = None, segmentation: bool = True,
                  write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
@@ -37,6 +37,7 @@ class TensorBoard:
             image_sizes: Dimensions of the input images (width, height)
             n_to_n: If using videos, is it N to 1 or N to N
             sequence_length: If using videos, Number of elements in each sequence
+            segmentation: If doing segmentation
             max_outputs: Number of images kept and dislpayed in TensorBoard
         """
         super().__init__()
@@ -46,6 +47,7 @@ class TensorBoard:
         self.max_outputs = max_outputs
         self.label_map = label_map
         self.n_to_n = n_to_n
+        self.segmentation = segmentation
 
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
@@ -83,7 +85,7 @@ class TensorBoard:
 
         batch = next(iter(dataloader))  # Get some data
 
-        data, labels = batch["data"][:self.max_outputs].float(), batch["label"][:self.max_outputs]
+        data, labels = batch[0][:self.max_outputs].float(), batch[1][:self.max_outputs]
         if preprocess_fn:
             data, labels = preprocess_fn(self, data, labels)
 
@@ -110,6 +112,41 @@ class TensorBoard:
         # Add them to TensorBoard
         for image_index, out_img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch, dataformats="HWC")
+
+    def write_segmentation(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
+                           preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
+                                                            Tuple[Tensor, Tensor]]] = None,
+                           postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
+                                                             Tuple[Tensor, Tensor]]] = None) -> None:
+        """
+        Writes images with predicted segmentation mask next to them to TensorBoard
+        Args:
+            epoch: Current epoch
+            dataloader: The images will be sampled from this dataset
+            mode: Either "Train" or "Validation"
+            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
+            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
+        """
+        clean_print("Writing segmentation image", end="\r")
+        tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
+
+        batch = next(iter(dataloader))  # Get some data
+
+        data, labels = batch[0][:self.max_outputs].float(), batch[1][:self.max_outputs]
+        if preprocess_fn:
+            data, labels = preprocess_fn(self, data, labels)
+
+        # Get some predictions
+        predictions = self.model(data.to(self.device))
+        if postprocess_fn:
+            data, predictions = postprocess_fn(self, data, predictions)
+
+        # Add them to TensorBoard
+        for image_index, (img, label, pred) in enumerate(zip(data, labels, predictions)):
+            tb_writer.add_image(f"{mode}/input_image_{image_index}", img, global_step=epoch, dataformats="HWC")
+            tb_writer.add_image(f"{mode}/input_mask_{image_index}", label, global_step=epoch, dataformats="HWC")
+            tb_writer.add_image(f"{mode}/output_mask_{image_index}", pred, global_step=epoch, dataformats="HWC")
+
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
                      preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
@@ -168,6 +205,12 @@ class TensorBoard:
         per_class_acc = self.metrics.get_class_accuracy()
         for key, acc in enumerate(per_class_acc):
             tb_writer.add_scalar(f"Per Class Accuracy/{self.label_map[key]}", acc, epoch)
+
+        if self.segmentation:
+            clean_print("Computing per class IOU", end="\r")
+            per_class_iou = self.metrics.get_class_iou()
+            for key, iou in enumerate(per_class_iou):
+                tb_writer.add_scalar(f"Per Class IOU/{self.label_map[key]}", iou, epoch)
 
         if write_defect_acc:
             acc = self.metrics.get_group_accuracy()
