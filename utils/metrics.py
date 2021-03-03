@@ -48,7 +48,7 @@ class Metrics:
         """
         self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
-            data_batch, labels_batch = batch[0].float(), batch[1].cpu().detach().numpy()
+            data_batch, labels_batch = batch[0].float(), batch[1]
             predictions_batch = self.model(data_batch.to(self.device))
 
             if not self.segmentation:
@@ -59,10 +59,11 @@ class Metrics:
                             self.cm[label_frame, pred_frame] += 1
                     else:
                         self.cm[label, pred] += 1
-                else:
-                    predictions_batch = predictions_batch.int().cpu().detach().numpy()
-                    for (label_pixel, pred_pixel) in zip(labels_batch.flatten(), predictions_batch.flatten()):
-                        self.cm[label_pixel, pred_pixel] += 1
+            else:
+                predictions_batch = torch.argmax(predictions_batch, dim=1).int().cpu().detach().numpy()
+                labels_batch = torch.argmax(labels_batch, dim=1).cpu().detach().numpy()  # TODO: Why use one hot ?
+                for (label_pixel, pred_pixel) in zip(labels_batch.flatten(), predictions_batch.flatten()):
+                    self.cm[label_pixel, pred_pixel] += 1
 
             if self.max_batches and step >= self.max_batches:
                 break

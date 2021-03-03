@@ -139,6 +139,8 @@ class BatchGenerator:
                         continue
                 else:
                     continue
+                if self.verbose:
+                    print(f"Worker {worker_index}, Starting to prepare mini-batch")
 
                 indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
 
@@ -147,20 +149,28 @@ class BatchGenerator:
                     processed_data = self.data_preprocessing_fn(self.data[indices_to_process])
                 else:
                     processed_data = self.data[indices_to_process]
+                if self.verbose:
+                    print(f"Worker {worker_index}, data processed successfully")
 
                 # Do the same for labels
                 if self.labels_preprocessing_fn:
                     processed_labels = self.labels_preprocessing_fn(self.labels[indices_to_process])
                 else:
                     processed_labels = self.labels[indices_to_process]
+                if self.verbose:
+                    print(f"Worker {worker_index}, labels processed successfully")
 
                 # Do data augmentation if required
                 if self.augmentation_pipeline:
                     processed_data, processed_labels = self.augmentation_pipeline(processed_data, processed_labels)
+                    if self.verbose:
+                        print(f"Worker {worker_index}, data augmentation done successfully")
 
                 # Put the mini-batch into the shared memory
                 self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
                 self._cache_labels[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_labels
+                if self.verbose:
+                    print(f"Worker {worker_index}, data and labels put to cache successfully")
 
                 # Send signal to the main process to say that everything is ready
                 pipe.send(True)

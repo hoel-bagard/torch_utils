@@ -1,8 +1,4 @@
-from typing import (
-    Tuple,
-    Dict,
-    Optional
-)
+from typing import Optional
 
 import cv2
 from einops import rearrange
@@ -11,7 +7,7 @@ import torch
 
 
 def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
-                  label_map: Dict[int, str], size: Optional[Tuple[int, int]] = None, ) -> np.ndarray:
+                  label_map: dict[int, str], size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
     """
     Draw predictions and labels on the image to help with TensorBoard visualisation.
     Args:
@@ -54,8 +50,8 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
 
 
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
-                    label_map: Dict[int, str], n_to_n: bool = False,
-                    size: Optional[Tuple[int, int]] = None, ) -> np.ndarray:
+                    label_map: dict[int, str], n_to_n: bool = False,
+                    size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
     """
     Draw predictions and labels on the video to help with TensorBoard visualisation.
     Args:
@@ -103,3 +99,31 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         new_video = np.expand_dims(new_video, -1)
 
     return new_video
+
+
+def draw_segmentation_map(one_hot_masks: torch.Tensor, color_map: dict[int, str],
+                          size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
+    """
+    Recreate the segmentation mask from its one hot representation
+    Args:
+        one_hot_masks: One hot representation of the segmentation masks.
+        color_map: Dictionary linking class index to its color
+        size: If given, the images will be resized to this size
+    Returns: RGB segmentation masks
+    """
+    one_hot_masks = rearrange(one_hot_masks, "b c w h -> b w h c")
+    masks: np.ndarray = torch.argmax(one_hot_masks, dim=-1).cpu().detach().numpy()
+    width, height, _ = one_hot_masks[0].shape  # All images are expected to have the same shape
+
+    out_imgs = []
+    for mask in masks:
+        img = np.empty((width, height, 3))
+        # TODO: optimize this later
+        for i in range(width):
+            for j in range(height):
+                img[i, j] = color_map[mask[i, j]]
+        out_imgs.append(img)
+
+        if size:
+            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+    return np.asarray(out_imgs)

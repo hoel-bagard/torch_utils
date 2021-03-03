@@ -15,15 +15,18 @@ from torch.utils.tensorboard import SummaryWriter
 
 from .draw import (
     draw_pred_img,
-    draw_pred_video
+    draw_pred_video,
+    draw_segmentation_map
 )
 from .metrics import Metrics
 from .misc import clean_print
 
 
+
 class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
                  image_sizes: Tuple[int, int], gray_scale: bool = False,
+                 color_map: Optional[Dict[int, tuple[int, int, int]]] = None,
                  n_to_n: bool = False, sequence_length: Optional[int] = None, segmentation: bool = True,
                  write_graph: bool = True, max_outputs: int = 4):
         """
@@ -32,6 +35,7 @@ class TensorBoard:
             model: Model'whose performance are to be recorded
             metrics: Instance of the Metrics class, used to compute classification metrics
             label_map: Dictionary linking class index to class name
+            color_map: Dictionary linking class index to class color
             tb_dir: Path to where the tensorboard files will be saved
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)
@@ -46,6 +50,7 @@ class TensorBoard:
         self.metrics = metrics
         self.max_outputs = max_outputs
         self.label_map = label_map
+        self.color_map = color_map
         self.n_to_n = n_to_n
         self.segmentation = segmentation
 
@@ -141,12 +146,20 @@ class TensorBoard:
         if postprocess_fn:
             data, predictions = postprocess_fn(self, data, predictions)
 
+
+        # TODO: temp code, fuse everythin in draw segmentation fn
+        imgs = rearrange(data, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
+        imgs: np.ndarray = imgs.cpu().detach().numpy()
+        imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
+
+        labels = draw_segmentation_map(labels, color_map=self.color_map)
+        predictions = draw_segmentation_map(predictions, color_map=self.color_map)
+
         # Add them to TensorBoard
-        for image_index, (img, label, pred) in enumerate(zip(data, labels, predictions)):
+        for image_index, (img, label, pred) in enumerate(zip(imgs, labels, predictions)):
             tb_writer.add_image(f"{mode}/input_image_{image_index}", img, global_step=epoch, dataformats="HWC")
             tb_writer.add_image(f"{mode}/input_mask_{image_index}", label, global_step=epoch, dataformats="HWC")
             tb_writer.add_image(f"{mode}/output_mask_{image_index}", pred, global_step=epoch, dataformats="HWC")
-
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
                      preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
