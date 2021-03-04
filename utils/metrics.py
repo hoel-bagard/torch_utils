@@ -14,14 +14,13 @@ from .batch_generator import BatchGenerator
 
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: BatchGenerator,
+    def __init__(self, model: nn.Module, train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator, label_map: Dict[int, str], max_batches: Optional[int] = 10,
                  n_to_n: bool = False, segmentation: bool = False):
         """
         Class computing usefull metrics for classification tasks
         Args:
             model: The PyTorch model being trained
-            loss_fn: Function used to compute the loss of the model
             train_dataloader: DataLoader containing train data
             val_dataloader: DataLoader containing validation data
             label_map: Dictionary linking class index to class name
