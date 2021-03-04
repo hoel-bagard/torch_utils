@@ -16,11 +16,10 @@ from torch.utils.tensorboard import SummaryWriter
 from .draw import (
     draw_pred_img,
     draw_pred_video,
-    draw_segmentation_map
+    draw_segmentation
 )
 from .metrics import Metrics
 from .misc import clean_print
-
 
 
 class TensorBoard:
@@ -146,20 +145,11 @@ class TensorBoard:
         if postprocess_fn:
             data, predictions = postprocess_fn(self, data, predictions)
 
-
-        # TODO: temp code, fuse everythin in draw segmentation fn
-        imgs = rearrange(data, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
-        imgs: np.ndarray = imgs.cpu().detach().numpy()
-        imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
-
-        labels = draw_segmentation_map(labels, color_map=self.color_map)
-        predictions = draw_segmentation_map(predictions, color_map=self.color_map)
+        out_imgs = draw_segmentation(data, predictions, labels, color_map=self.color_map)
 
         # Add them to TensorBoard
-        for image_index, (img, label, pred) in enumerate(zip(imgs, labels, predictions)):
-            tb_writer.add_image(f"{mode}/input_image_{image_index}", img, global_step=epoch, dataformats="HWC")
-            tb_writer.add_image(f"{mode}/input_mask_{image_index}", label, global_step=epoch, dataformats="HWC")
-            tb_writer.add_image(f"{mode}/output_mask_{image_index}", pred, global_step=epoch, dataformats="HWC")
+        for image_index, img in enumerate(out_imgs):
+            tb_writer.add_image(f"{mode}/segmentation_output_{image_index}", img, global_step=epoch, dataformats="HWC")
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
                      preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,

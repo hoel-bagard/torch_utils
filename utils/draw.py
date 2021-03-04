@@ -101,29 +101,52 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     return new_video
 
 
-def draw_segmentation_map(one_hot_masks: torch.Tensor, color_map: dict[int, str],
-                          size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
+def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
+                      color_map: dict[int, str], size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
     """
-    Recreate the segmentation mask from its one hot representation
+    Recreate the segmentation masks from their one hot representations, and place them next to the original image
     Args:
-        one_hot_masks: One hot representation of the segmentation masks.
+        input_imgs: Images that were fed to the network.
+        one_hot_masks_labels: One hot representation of the label segmentation masks.
+        one_hot_masks_preds: One hot representation of the prediction segmentation masks.
         color_map: Dictionary linking class index to its color
         size: If given, the images will be resized to this size
-    Returns: RGB segmentation masks
+    Returns: RGB segmentation masks and original image (in one image)
     """
-    one_hot_masks = rearrange(one_hot_masks, "b c w h -> b w h c")
-    masks: np.ndarray = torch.argmax(one_hot_masks, dim=-1).cpu().detach().numpy()
-    width, height, _ = one_hot_masks[0].shape  # All images are expected to have the same shape
+    imgs = rearrange(input_imgs, "b c w h -> b w h c").cpu().detach().numpy()
+    imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
+    one_hot_masks_preds = rearrange(one_hot_masks_preds, "b c w h -> b w h c")
+    masks_preds: np.ndarray = torch.argmax(one_hot_masks_preds, dim=-1).cpu().detach().numpy()
+    one_hot_masks_labels = rearrange(one_hot_masks_labels, "b c w h -> b w h c")
+    masks_labels: np.ndarray = torch.argmax(one_hot_masks_labels, dim=-1).cpu().detach().numpy()
+
+    width, height, _ = imgs[0].shape  # All images are expected to have the same shape
+
+    # Create a blank image with some text to explain what things are
+    blank_img = np.full((width, height, 3), 255,  dtype=np.uint8)
+    blank_img = cv2.putText(blank_img, "Top left: input image.", (20, 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+    blank_img = cv2.putText(blank_img, "Top right: label mask", (20, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+    blank_img = cv2.putText(blank_img, "Bottom left: predicted mask", (20, 60),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
 
     out_imgs = []
-    for mask in masks:
-        img = np.empty((width, height, 3))
+    for img, pred_mask, label_mask in zip(imgs, masks_preds, masks_labels):
+        # Recreate the segmentation mask from its one hot representation
+        pred_mask_rgb = np.empty((width, height, 3), dtype=np.uint8)
+        label_mask_rgb = np.empty((width, height, 3), dtype=np.uint8)
         # TODO: optimize this later
         for i in range(width):
             for j in range(height):
-                img[i, j] = color_map[mask[i, j]]
-        out_imgs.append(img)
+                pred_mask_rgb[i, j] = color_map[pred_mask[i, j]]
+                label_mask_rgb[i, j] = color_map[label_mask[i, j]]
 
+        out_img_top = cv2.hconcat((img, label_mask_rgb))
+        out_img_bot = cv2.hconcat((pred_mask_rgb, blank_img))
+        out_img = cv2.vconcat((out_img_top, out_img_bot))
         if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+            out_img = cv2.resize(out_img, size, interpolation=cv2.INTER_AREA)
+        out_imgs.append(out_img)
+
     return np.asarray(out_imgs)

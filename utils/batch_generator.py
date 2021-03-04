@@ -5,14 +5,10 @@ from pathlib import Path
 from typing import (
     Callable,
     Optional,
-    Final,
-    Any
+    Final
 )
 from itertools import product
-from time import (
-    time,
-    # sleep
-)
+from time import time
 from math import ceil
 
 import numpy as np
