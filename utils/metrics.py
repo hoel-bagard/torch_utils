@@ -64,7 +64,6 @@ class Metrics:
                 labels_batch = torch.argmax(labels_batch, dim=1).cpu().detach().numpy()  # TODO: Why use one hot ?
                 for (label_pixel, pred_pixel) in zip(labels_batch.flatten(), predictions_batch.flatten()):
                     self.cm[label_pixel, pred_pixel] += 1
-
             if self.max_batches and step >= self.max_batches:
                 break
 
@@ -152,5 +151,6 @@ class Metrics:
         # Convert matplotlib plot to normal image
         img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
         img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        plt.close(fig)  # Close figure explicitly to avoid memory leak
 
         return img
