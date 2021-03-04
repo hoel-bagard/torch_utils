@@ -7,7 +7,7 @@ import torch
 
 
 def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
-                  label_map: dict[int, str], size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
+                  label_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Draw predictions and labels on the image to help with TensorBoard visualisation.
     Args:
@@ -51,7 +51,7 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
 
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
                     label_map: dict[int, str], n_to_n: bool = False,
-                    size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
+                    size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Draw predictions and labels on the video to help with TensorBoard visualisation.
     Args:
@@ -102,7 +102,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
 
 
 def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
-                      color_map: dict[int, str], size: Optional[tuple[int, int]] = None, ) -> np.ndarray:
+                      color_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Recreate the segmentation masks from their one hot representations, and place them next to the original image
     Args:
@@ -123,13 +123,13 @@ def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_mas
     width, height, _ = imgs[0].shape  # All images are expected to have the same shape
 
     # Create a blank image with some text to explain what things are
-    blank_img = np.full((width, height, 3), 255,  dtype=np.uint8)
-    blank_img = cv2.putText(blank_img, "Top left: input image.", (20, 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-    blank_img = cv2.putText(blank_img, "Top right: label mask", (20, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-    blank_img = cv2.putText(blank_img, "Bottom left: predicted mask", (20, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+    text_img = np.full((width, height, 3), 255,  dtype=np.uint8)
+    text_img = cv2.putText(text_img, "Top left: input image.", (20, 20),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+    text_img = cv2.putText(text_img, "Top right: label mask", (20, 40),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+    text_img = cv2.putText(text_img, "Bottom left: predicted mask", (20, 60),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
 
     out_imgs = []
     for img, pred_mask, label_mask in zip(imgs, masks_preds, masks_labels):
@@ -143,7 +143,7 @@ def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_mas
                 label_mask_rgb[i, j] = color_map[label_mask[i, j]]
 
         out_img_top = cv2.hconcat((img, label_mask_rgb))
-        out_img_bot = cv2.hconcat((pred_mask_rgb, blank_img))
+        out_img_bot = cv2.hconcat((pred_mask_rgb, text_img))
         out_img = cv2.vconcat((out_img_top, out_img_bot))
         if size:
             out_img = cv2.resize(out_img, size, interpolation=cv2.INTER_AREA)
