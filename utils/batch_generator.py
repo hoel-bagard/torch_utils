@@ -74,7 +74,7 @@ class BatchGenerator:
         self.last_batch_size = self.nb_datapoints % self.batch_size
         if self.last_batch_size == 0:
             self.last_batch_size = self.batch_size
-        self.current_batch_size = self.batch_size
+        self.current_batch_size = self.batch_size if self.step_per_epoch > 1 else self.last_batch_size
 
         self.epoch = 0
         self.global_step = 0
@@ -135,8 +135,8 @@ class BatchGenerator:
                         continue
                 else:
                     continue
-                if self.verbose:
-                    print(f"Worker {worker_index}, Starting to prepare mini-batch")
+                if self.verbose > 2:
+                    print(f"Worker {worker_index}, Starting to prepare mini-batch of {nb_elts} elements")
 
                 indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
 
@@ -145,7 +145,7 @@ class BatchGenerator:
                     processed_data = self.data_preprocessing_fn(self.data[indices_to_process])
                 else:
                     processed_data = self.data[indices_to_process]
-                if self.verbose:
+                if self.verbose > 2:
                     print(f"Worker {worker_index}, data processed successfully")
 
                 # Do the same for labels
@@ -153,19 +153,19 @@ class BatchGenerator:
                     processed_labels = self.labels_preprocessing_fn(self.labels[indices_to_process])
                 else:
                     processed_labels = self.labels[indices_to_process]
-                if self.verbose:
+                if self.verbose > 2:
                     print(f"Worker {worker_index}, labels processed successfully")
 
                 # Do data augmentation if required
                 if self.augmentation_pipeline:
                     processed_data, processed_labels = self.augmentation_pipeline(processed_data, processed_labels)
-                    if self.verbose:
+                    if self.verbose > 2:
                         print(f"Worker {worker_index}, data augmentation done successfully")
 
                 # Put the mini-batch into the shared memory
                 self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
                 self._cache_labels[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_labels
-                if self.verbose:
+                if self.verbose > 2:
                     print(f"Worker {worker_index}, data and labels put to cache successfully")
 
                 # Send signal to the main process to say that everything is ready
@@ -189,11 +189,12 @@ class BatchGenerator:
         prefetch_cache = 1 - self._current_cache
         nb_workers = min(self.nb_workers, prefetch_batch_size)  # Do not use all the workers if the batch size is small
         nb_elts_per_worker = prefetch_batch_size // nb_workers
+        nb_elts_last_worker = nb_elts_per_worker + prefetch_batch_size % nb_workers
         for worker_idx in range(self.nb_workers):
             if worker_idx < nb_workers:
                 cache_start_index = worker_idx * nb_elts_per_worker
                 indices_start_index = (step-1) * self.batch_size + cache_start_index
-                nb_elts = nb_elts_per_worker if worker_idx != (nb_workers-1) else ceil(prefetch_batch_size / nb_workers)
+                nb_elts = nb_elts_per_worker if worker_idx != (nb_workers-1) else nb_elts_last_worker
                 self.worker_pipes[worker_idx][0].send((prefetch_cache, cache_start_index, indices_start_index, nb_elts))
             else:
                 # Send empty instructions to excess workers
@@ -284,7 +285,7 @@ class BatchGenerator:
 
 if __name__ == '__main__':
     parser = ArgumentParser("BatchGenerator Test script")
-    parser.add_argument("--verbose", "--v", action="store_true", help="Verbose mode")
+    parser.add_argument("--verbose", "--v", type=int, default=0, help="Verbose level to use")
     args = parser.parse_args()
 
     verbose = args.verbose
@@ -298,7 +299,7 @@ if __name__ == '__main__':
 
         # Prepare variables to test against
         workers = [1, 2, 5]
-        batch_sizes = [5]
+        batch_sizes = [5, 2*nb_datapoints]
         data_preprocessing_fns = [None]
         labels_preprocessing_fns = [None]
 
@@ -308,7 +309,7 @@ if __name__ == '__main__':
             nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
 
             if verbose:
-                print(f'{nb_workers=}')
+                print(f"\n\nStarting test with {nb_workers=}, {batch_size=}")
 
             # Preprocess data and labels here to do it only once
             processed_data = data_preprocessing_fn(data) if data_preprocessing_fn else data
@@ -320,7 +321,7 @@ if __name__ == '__main__':
             global_step = 0
 
             with BatchGenerator(data, labels, batch_size, data_preprocessing_fn=data_preprocessing_fn,
-                                nb_workers=nb_workers, shuffle=True) as batch_generator:
+                                nb_workers=nb_workers, shuffle=True, verbose=verbose) as batch_generator:
                 for epoch in range(5):
                     # Variables used to aggregate dataset
                     agg_data = []
@@ -331,8 +332,9 @@ if __name__ == '__main__':
                         agg_data += list(data_batch)
                         agg_labels += list(labels_batch)
 
-                        if verbose:
+                        if verbose > 1:
                             print(f"{batch_generator.epoch=}, {batch_generator.step=}")
+                        if verbose > 2:
                             print(f"{data_batch=}, {labels_batch=}")
 
                         # Check that variables are what they should be
