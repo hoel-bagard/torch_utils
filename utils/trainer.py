@@ -31,7 +31,7 @@ class Trainer:
         self.val_dataloader = val_dataloader
         self.batch_size = train_dataloader.batch_size
         self.on_epoch_begin = on_epoch_begin
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO: remove hardcoded 0 ?
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.train_steps_per_epoch = (len(train_dataloader) + (self.batch_size - 1)) // self.batch_size
         self.val_steps_per_epoch = (len(val_dataloader) + (self.batch_size - 1)) // self.batch_size

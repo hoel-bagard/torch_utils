@@ -25,7 +25,7 @@ from .misc import clean_print
 class TensorBoard:
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
                  image_sizes: Tuple[int, int], gray_scale: bool = False,
-                 color_map: Optional[Dict[int, tuple[int, int, int]]] = None,
+                 color_map: Optional[list[tuple[int, int, int]]] = None,
                  n_to_n: bool = False, sequence_length: Optional[int] = None, segmentation: bool = True,
                  write_graph: bool = True, max_outputs: int = 4):
         """
@@ -34,7 +34,7 @@ class TensorBoard:
             model: Model'whose performance are to be recorded
             metrics: Instance of the Metrics class, used to compute classification metrics
             label_map: Dictionary linking class index to class name
-            color_map: Dictionary linking class index to class color
+            color_map: List linking class index to class color
             tb_dir: Path to where the tensorboard files will be saved
             gray_scale: True if using gray scale
             image_sizes: Dimensions of the input images (width, height)

@@ -102,14 +102,14 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
 
 
 def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
-                      color_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
+                      color_map: list[tuple[int, int, int]], size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """
     Recreate the segmentation masks from their one hot representations, and place them next to the original image
     Args:
         input_imgs: Images that were fed to the network.
         one_hot_masks_labels: One hot representation of the label segmentation masks.
         one_hot_masks_preds: One hot representation of the prediction segmentation masks.
-        color_map: Dictionary linking class index to its color
+        color_map: List linking class index to its color
         size: If given, the images will be resized to this size
     Returns: RGB segmentation masks and original image (in one image)
     """
@@ -134,13 +134,8 @@ def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_mas
     out_imgs = []
     for img, pred_mask, label_mask in zip(imgs, masks_preds, masks_labels):
         # Recreate the segmentation mask from its one hot representation
-        pred_mask_rgb = np.empty((width, height, 3), dtype=np.uint8)
-        label_mask_rgb = np.empty((width, height, 3), dtype=np.uint8)
-        # TODO: optimize this later
-        for i in range(width):
-            for j in range(height):
-                pred_mask_rgb[i, j] = color_map[pred_mask[i, j]]
-                label_mask_rgb[i, j] = color_map[label_mask[i, j]]
+        pred_mask_rgb = np.asarray(color_map[pred_mask], dtype=np.uint8)
+        label_mask_rgb = np.asarray(color_map[label_mask], dtype=np.uint8)
 
         out_img_top = cv2.hconcat((img, label_mask_rgb))
         out_img_bot = cv2.hconcat((pred_mask_rgb, text_img))
