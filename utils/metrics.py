@@ -121,7 +121,8 @@ class Metrics:
         Returns:
             img: Image of the confusion matrix.
         """
-        cm = self.cm
+        # Normalize the confusion matrix.
+        cm = np.around(self.cm.astype("float") / self.cm.sum(axis=1)[:, np.newaxis], decimals=2)
         class_names = self.label_map.values()
 
         fig = plt.figure(figsize=(8, 8))
@@ -131,9 +132,6 @@ class Metrics:
         tick_marks = np.arange(len(class_names))
         plt.xticks(tick_marks, class_names, rotation=45)
         plt.yticks(tick_marks, class_names)
-
-        # Normalize the confusion matrix.
-        cm = np.around(cm.astype("float") / cm.sum(axis=1)[:, np.newaxis], decimals=2)
 
         # Use white text if squares are dark; otherwise black.
         threshold = cm.max() / 2.
