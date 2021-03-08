@@ -187,13 +187,13 @@ class BatchGenerator:
         prefetch_batch_size = self.batch_size if step != self.step_per_epoch else self.last_batch_size
         prefetch_cache = 1 - self._current_cache
         nb_workers = min(self.nb_workers, prefetch_batch_size)  # Do not use all the workers if the batch size is small
-        nb_elts_per_worker = prefetch_batch_size // nb_workers
-        nb_elts_last_worker = nb_elts_per_worker + prefetch_batch_size % nb_workers
+        nb_elts_per_worker = prefetch_batch_size // nb_workers  # Minimum number of samples processed by a given worker
+        remaining_elts = prefetch_batch_size % nb_workers  # The first remaining_elts workers will process 1 more sample
         for worker_idx in range(self.nb_workers):
             if worker_idx < nb_workers:
-                cache_start_index = worker_idx * nb_elts_per_worker
+                cache_start_index = worker_idx * nb_elts_per_worker + min(worker_idx, remaining_elts)
                 indices_start_index = (step-1) * self.batch_size + cache_start_index
-                nb_elts = nb_elts_per_worker if worker_idx != (nb_workers-1) else nb_elts_last_worker
+                nb_elts = nb_elts_per_worker+1 if worker_idx < remaining_elts else nb_elts_per_worker
                 self.worker_pipes[worker_idx][0].send((prefetch_cache, cache_start_index, indices_start_index, nb_elts))
             else:
                 # Send empty instructions to excess workers
@@ -373,7 +373,8 @@ if __name__ == '__main__':
                     assert len(agg_data) == nb_datapoints, (
                         f"{len(agg_data)} elements appeared instead of {nb_datapoints}")
                     assert set(agg_data) == set(processed_data), (
-                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}")
+                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}"
+                        f"\n{list(set(agg_data))}  (set version)")
                     assert set(agg_labels) == set(processed_labels), (
                         f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
 
