@@ -20,6 +20,7 @@ from .draw import (
 )
 from .metrics import Metrics
 from .misc import clean_print
+from .batch_generator import BatchGenerator
 
 
 class TensorBoard:
@@ -70,7 +71,7 @@ class TensorBoard:
         self.train_tb_writer.close()
         self.val_tb_writer.close()
 
-    def write_images(self, epoch: int, dataloader: torch.utils.data.DataLoader,
+    def write_images(self, epoch: int, dataloader: BatchGenerator,
                      mode: str = "Train", input_is_video: bool = False,
                      preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
@@ -87,7 +88,8 @@ class TensorBoard:
         clean_print("Writing images", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
-        batch = next(iter(dataloader))  # Get some data
+        batch = dataloader.next_batch()  # Get some data
+        dataloader.reset_epoch()  # Reset the epoch to not cause issues for other functions
 
         data, labels = batch[0][:self.max_outputs].float(), batch[1][:self.max_outputs]
         if preprocess_fn:
@@ -117,7 +119,7 @@ class TensorBoard:
         for image_index, out_img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch, dataformats="HWC")
 
-    def write_segmentation(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
+    def write_segmentation(self, epoch: int, dataloader: BatchGenerator, mode: str = "Train",
                            preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
                                                             Tuple[Tensor, Tensor]]] = None,
                            postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
@@ -134,7 +136,8 @@ class TensorBoard:
         clean_print("Writing segmentation image", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
-        batch = next(iter(dataloader))  # Get some data
+        batch = dataloader.next_batch()  # Get some data
+        dataloader.reset_epoch()  # Reset the epoch to not cause issues for other functions
 
         data, labels = batch[0][:self.max_outputs].float(), batch[1][:self.max_outputs]
         if preprocess_fn:
@@ -151,7 +154,7 @@ class TensorBoard:
         for image_index, img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/segmentation_output_{image_index}", img, global_step=epoch, dataformats="HWC")
 
-    def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train",
+    def write_videos(self, epoch: int, dataloader: BatchGenerator, mode: str = "Train",
                      preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None):
         """
@@ -166,7 +169,8 @@ class TensorBoard:
         clean_print("Writing videos", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
 
-        batch = next(iter(dataloader))  # Get some data
+        batch = dataloader.next_batch()  # Get some data
+        dataloader.reset_epoch()  # Reset the epoch to not cause issues for other functions
 
         videos, labels = batch["data"][:1].float(), batch["label"][:1]
         if preprocess_fn:

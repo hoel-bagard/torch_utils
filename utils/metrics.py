@@ -46,6 +46,7 @@ class Metrics:
             mode: Either "Train" or "Validation"
         """
         self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
+
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
             data_batch, labels_batch = batch[0].float(), batch[1]
             predictions_batch = self.model(data_batch.to(self.device))

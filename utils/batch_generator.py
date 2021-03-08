@@ -230,6 +230,14 @@ class BatchGenerator:
 
         return data_batch, labels_batch
 
+    def reset_epoch(self):
+        """ Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)"""
+        self.step = self.step_per_epoch - 1  # Go to the last step of the epoch
+        self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
+        self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
+        self._next_epoch()
+        self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
+
     def _next_epoch(self):
         """Prepares variables for the next epoch"""
         self.epoch += 1
