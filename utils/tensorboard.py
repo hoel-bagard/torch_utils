@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from torch import Tensor
 import torch.nn as nn
+from torch.nn.modules.module import ModuleAttributeError
 from torch.utils.tensorboard import SummaryWriter
 
 from .draw import (
@@ -53,6 +54,8 @@ class TensorBoard:
         self.color_map = color_map
         self.n_to_n = n_to_n
         self.segmentation = segmentation
+
+        self.weights_warning_printed: bool = False  # Prints a warning if the network cannot give its weights
 
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
@@ -228,6 +231,17 @@ class TensorBoard:
         tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch, dataformats="HWC")
 
         return avg_acc
+
+    def write_weights_grad(self, epoch):
+        try:
+            for tag, (weight, grad) in self.model.get_weight_and_grads().items():
+                self.train_tb_writer.add_histogram(f"{tag}/weights", weight, epoch)
+                self.train_tb_writer.add_histogram(f"{tag}/gradients", grad, epoch)
+        except ModuleAttributeError:
+            if not self.weights_warning_printed:
+                print(f"Warning: The model {self.model.__class__.__name__}"
+                      f" does not support recording weights and gradients.")
+                self.weights_warning_printed = True
 
     def write_loss(self, epoch: int, loss: float, mode: str = "Train"):
         """
