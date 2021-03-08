@@ -9,7 +9,6 @@ from typing import (
 )
 from itertools import product
 from time import time
-from math import ceil
 
 import numpy as np
 from torch import Tensor
