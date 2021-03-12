@@ -71,7 +71,7 @@ class Trainer:
             step_start_time = time.perf_counter()
             self._print(step, steps_per_epoch, loss, step_time, fetch_time)
 
-        return epoch_loss / self.train_steps_per_epoch
+        return epoch_loss / steps_per_epoch
 
     def train_epoch(self):
         return self.epoch_loop()
