@@ -69,6 +69,10 @@ class BatchGenerator:
         if self.augmentation_pipeline:
             data_batch, labels_batch = self.augmentation_pipeline(data_batch, labels_batch)
 
+        # The shapes are not used in the BatchGenerator, but they can be accessed by other functions
+        self.data_shape = data_batch.shape[1:]
+        self.label_shape = labels_batch[1:]
+
         self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
         if self.last_batch_size == 0:
