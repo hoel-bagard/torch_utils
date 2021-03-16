@@ -43,7 +43,7 @@ class TensorBoard:
             n_to_n: If using videos, is it N to 1 or N to N
             sequence_length: If using videos, Number of elements in each sequence
             segmentation: If doing segmentation
-            max_outputs: Number of images kept and dislpayed in TensorBoard
+            max_outputs (int): Maximal number of images kept and displayed in TensorBoard (per function call)
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -75,6 +75,7 @@ class TensorBoard:
         self.val_tb_writer.close()
 
     def write_images(self, epoch: int, dataloader: BatchGenerator,
+                     draw_fn: Callable[[Tensor, Tensor], np.ndarray] = draw_pred_img,
                      mode: str = "Train", input_is_video: bool = False,
                      preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
@@ -82,11 +83,16 @@ class TensorBoard:
         """
         Writes images with predictions written on them to TensorBoard
         Args:
-            epoch: Current epoch
-            dataloader: The images will be sampled from this dataset
-            mode: Either "Train" or "Validation"
-            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
-            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
+            epoch (int): Current epoch
+            dataloader (BatchGenerator): The images will be sampled from this dataset
+            draw_fn (callable): Function that takes in the tensor images, labels and predictions
+                                and draws on the images before returning them.
+            mode (str): Either "Train" or "Validation"
+            input_is_video (bool): If the input data is a video.
+            preprocess_fn (callable, optional): function called before inference.
+                                                Gets data and labels as input, expects them as outputs
+            postprocess_fn (callable, optional): function called after inference.
+                                                 Gets data and predictions as input, expects them as outputs
         """
         clean_print("Writing images", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
@@ -100,13 +106,12 @@ class TensorBoard:
 
         # Get some predictions
         predictions = self.model(data.to(self.device))
-        data, predictions = data[:self.max_outputs], predictions[:self.max_outputs]  # Just in case (damn LSTM)
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
         if postprocess_fn:
             data, predictions = postprocess_fn(self, data, predictions)
 
         if input_is_video:
-            # Keep only on frame per video (middle one)
+            # Keep only one frame per video (middle one)
             frame_to_keep = data.shape[1] // 2
             imgs = data[:, frame_to_keep, :, :, :]
             if self.n_to_n:
@@ -116,7 +121,7 @@ class TensorBoard:
             imgs = data
 
         # Write prediction on the images
-        out_imgs = draw_pred_img(imgs, predictions, labels, self.label_map)
+        out_imgs = draw_fn(imgs, predictions, labels, **{"label_map": self.label_map})
 
         # Add them to TensorBoard
         for image_index, out_img in enumerate(out_imgs):
@@ -195,13 +200,17 @@ class TensorBoard:
 
     def write_metrics(self, epoch: int, mode: str = "Train", write_defect_acc: bool = False) -> float:
         """
-        Writes accuracy metrics in TensorBoard
+        Writes accuracy metrics in TensorBoard (for classification like tasks)
+
         Args:
-            epoch: Current epoch
-            mode: Either "Train" or "Validation"
-            write_defect_acc: If doing defect detection, this expect the "good" class to be 0
+            epoch (int): Current epoch
+            mode (str): Either "Train" or "Validation"
+            write_defect_acc (bool): If doing defect detection, this expect the "good" class to be 0
+
+        Mostly comments changes, removed the LSTM special case since the postprocess_fn can handle it.
+
         Returns:
-            avg_acc: Average accuracy
+            float: Average accuracy
         """
         clean_print("Computing confusion matrix", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
