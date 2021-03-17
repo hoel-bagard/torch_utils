@@ -25,21 +25,22 @@ from .batch_generator import BatchGenerator
 
 
 class TensorBoard:
-    def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 image_sizes: Tuple[int, int], gray_scale: bool = False,
-                 color_map: Optional[list[tuple[int, int, int]]] = None,
+    # TODO: Fuse sequence_length and grayscale with image_size, call it data_shape
+    def __init__(self, model: nn.Module,  tb_dir: str, image_sizes: Tuple[int, int],
+                 metrics: Optional[Metrics] = None, label_map: Optional[Dict[int, str]] = None,
+                 gray_scale: bool = False, color_map: Optional[list[tuple[int, int, int]]] = None,
                  n_to_n: bool = False, sequence_length: Optional[int] = None, segmentation: bool = True,
                  write_graph: bool = True, max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
         Args:
-            model: Model'whose performance are to be recorded
+            model (nn.Module): Pytorch model whose performance are to be recorded
+            image_sizes: Dimensions of the input images (width, height), used if writing the model graph
             metrics: Instance of the Metrics class, used to compute classification metrics
             label_map: Dictionary linking class index to class name
             color_map: List linking class index to class color
             tb_dir: Path to where the tensorboard files will be saved
             gray_scale: True if using gray scale
-            image_sizes: Dimensions of the input images (width, height)
             n_to_n: If using videos, is it N to 1 or N to N
             sequence_length: If using videos, Number of elements in each sequence
             segmentation: If doing segmentation
@@ -89,9 +90,9 @@ class TensorBoard:
                                 and draws on the images before returning them.
             mode (str): Either "Train" or "Validation"
             input_is_video (bool): If the input data is a video.
-            preprocess_fn (callable, optional): function called before inference.
+            preprocess_fn (callable, optional): Function called before inference.
                                                 Gets data and labels as input, expects them as outputs
-            postprocess_fn (callable, optional): function called after inference.
+            postprocess_fn (callable, optional): Function called after inference.
                                                  Gets data and predictions as input, expects them as outputs
         """
         clean_print("Writing images", end="\r")
@@ -127,6 +128,7 @@ class TensorBoard:
         for image_index, out_img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch, dataformats="HWC")
 
+    # TODO: unify with write image ?
     def write_segmentation(self, epoch: int, dataloader: BatchGenerator, mode: str = "Train",
                            preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
                                                             Tuple[Tensor, Tensor]]] = None,
@@ -135,11 +137,13 @@ class TensorBoard:
         """
         Writes images with predicted segmentation mask next to them to TensorBoard
         Args:
-            epoch: Current epoch
-            dataloader: The images will be sampled from this dataset
-            mode: Either "Train" or "Validation"
-            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
-            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
+            epoch (int): Current epoch
+            dataloader (BatchGenerator): The images will be sampled from this dataset
+            mode (str): Either "Train" or "Validation"
+            preprocess_fn (callable, optional): Called before inference.
+                                                Gets data and labels as input, expects them as outputs
+            postprocess (callable, optional): Called after inference.
+                                              Gets data and predictions as input, expects them as outputs
         """
         clean_print("Writing segmentation image", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
@@ -168,11 +172,13 @@ class TensorBoard:
         """
         Write a video with predictions written on it to TensorBoard
         Args:
-            epoch: Current epoch
-            dataloader: The images will be sampled from this dataset
-            mode: Either "Train" or "Validation"
-            preprocess_fn: function called before inference. Gets data and labels as input, expects them as outputs
-            postprocess: function called after inference. Gets data and predictions as input, expects them as outputs
+            epoch (int): Current epoch
+            dataloader (BatchGenerator): The images will be sampled from this dataset
+            mode (str): Either "Train" or "Validation"
+            preprocess_fn (callable, optional): Called before inference.
+                                                Gets data and labels as input, expects them as outputs
+            postprocess (callable, optional): Called after inference.
+                                              Gets data and predictions as input, expects them as outputs
         """
         clean_print("Writing videos", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
@@ -199,19 +205,19 @@ class TensorBoard:
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
     def write_metrics(self, epoch: int, mode: str = "Train", write_defect_acc: bool = False) -> float:
-        """
-        Writes accuracy metrics in TensorBoard (for classification like tasks)
+        """ Writes accuracy metrics in TensorBoard (for classification like tasks)
 
         Args:
             epoch (int): Current epoch
             mode (str): Either "Train" or "Validation"
             write_defect_acc (bool): If doing defect detection, this expect the "good" class to be 0
 
-        Mostly comments changes, removed the LSTM special case since the postprocess_fn can handle it.
-
         Returns:
             float: Average accuracy
         """
+        if not isinstance(self.metrics, Metrics):
+            raise TypeError("Trying to write metrics, but did not get a Metrics instance during initialization")
+
         clean_print("Computing confusion matrix", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         self.metrics.compute_confusion_matrix(mode=mode)
@@ -241,7 +247,12 @@ class TensorBoard:
 
         return avg_acc
 
-    def write_weights_grad(self, epoch):
+    def write_weights_grad(self, epoch: int):
+        """ Writes the model's weights and gradients to tensorboard, if the model can provide them.
+
+        Args:
+            epoch (int): Current epoch
+        """
         try:
             for tag, (weight, grad) in self.model.get_weight_and_grads().items():
                 self.train_tb_writer.add_histogram(f"{tag}/weights", weight, epoch)
@@ -253,22 +264,22 @@ class TensorBoard:
                 self.weights_warning_printed = True
 
     def write_loss(self, epoch: int, loss: float, mode: str = "Train"):
-        """
-        Writes loss metric in TensorBoard
+        """ Writes loss metric in TensorBoard
+
         Args:
-            epoch: Current epoch
-            loss: Epoch loss that will be added to the TensorBoard
-            mode: Either "Train" or "Validation"
+            epoch (int): Current epoch
+            loss (float): Epoch loss that will be added to the TensorBoard
+            mode (str): Either "Train" or "Validation"
         """
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         tb_writer.add_scalar("Loss", loss, epoch)
         self.train_tb_writer.flush()
 
     def write_lr(self, epoch: int, lr: float):
-        """
-        Writes learning rate in the TensorBoard
+        """ Writes learning rate in the TensorBoard
+
         Args:
-            epoch: Current epoch
-            lr: Learning rate for the given epoch
+            epoch (int): Current epoch
+            lr (float): Learning rate for the given epoch
         """
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
