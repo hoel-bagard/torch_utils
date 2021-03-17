@@ -204,13 +204,13 @@ class TensorBoard:
 
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
-    def write_metrics(self, epoch: int, mode: str = "Train", write_defect_acc: bool = False) -> float:
+    def write_metrics(self, epoch: int, mode: str = "Train", good_vs_defects: bool = False) -> float:
         """ Writes accuracy metrics in TensorBoard (for classification like tasks)
 
         Args:
             epoch (int): Current epoch
             mode (str): Either "Train" or "Validation"
-            write_defect_acc (bool): If doing defect detection, this expect the "good" class to be 0
+            good_vs_defects (bool): If doing defects detection, this expect the "good" class to be 0
 
         Returns:
             float: Average accuracy
@@ -218,34 +218,16 @@ class TensorBoard:
         if not isinstance(self.metrics, Metrics):
             raise TypeError("Trying to write metrics, but did not get a Metrics instance during initialization")
 
-        clean_print("Computing confusion matrix", end="\r")
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
-        self.metrics.compute_confusion_matrix(mode=mode)
+        metrics = self.metrics.get_metrics(mode, **{"good_vs_defects": good_vs_defects})
 
-        clean_print("Computing average accuracy", end="\r")
-        avg_acc = self.metrics.get_avg_acc()
-        tb_writer.add_scalar("Average Accuracy", avg_acc, epoch)
+        clean_print("Adding scalars to TensorBoard", end="\r")
+        for scalar_metric_name, scalar_metric_value in metrics["scalars"].items():
+            tb_writer.add_scalar(scalar_metric_name, scalar_metric_value, epoch)
 
-        clean_print("Computing per class accuracy", end="\r")
-        per_class_acc = self.metrics.get_class_accuracy()
-        for key, acc in enumerate(per_class_acc):
-            tb_writer.add_scalar(f"Per Class Accuracy/{self.label_map[key]}", acc, epoch)
-
-        if self.segmentation:
-            clean_print("Computing per class IOU", end="\r")
-            per_class_iou = self.metrics.get_class_iou()
-            for key, iou in enumerate(per_class_iou):
-                tb_writer.add_scalar(f"Per Class IOU/{self.label_map[key]}", iou, epoch)
-
-        if write_defect_acc:
-            acc = self.metrics.get_group_accuracy()
-            tb_writer.add_scalar("Defect accuracy", acc, epoch)
-
-        clean_print("Creating confusion matrix image", end="\r")
-        confusion_matrix = self.metrics.get_confusion_matrix()
-        tb_writer.add_image("Confusion Matrix", confusion_matrix, global_step=epoch, dataformats="HWC")
-
-        return avg_acc
+        clean_print("Adding images to TensorBoard", end="\r")
+        for img_metric_name, img_metric_value in metrics["imgs"].items():
+            tb_writer.add_image(img_metric_value, img_metric_value, global_step=epoch, dataformats="HWC")
 
     def write_weights_grad(self, epoch: int):
         """ Writes the model's weights and gradients to tensorboard, if the model can provide them.
