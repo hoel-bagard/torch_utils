@@ -204,13 +204,12 @@ class TensorBoard:
 
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
-    def write_metrics(self, epoch: int, mode: str = "Train", good_vs_defects: bool = False) -> float:
+    def write_metrics(self, epoch: int, mode: str = "Train") -> float:
         """ Writes accuracy metrics in TensorBoard (for classification like tasks)
 
         Args:
             epoch (int): Current epoch
             mode (str): Either "Train" or "Validation"
-            good_vs_defects (bool): If doing defects detection, this expect the "good" class to be 0
 
         Returns:
             float: Average accuracy
@@ -219,7 +218,7 @@ class TensorBoard:
             raise TypeError("Trying to write metrics, but did not get a Metrics instance during initialization")
 
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
-        metrics = self.metrics.get_metrics(mode, **{"good_vs_defects": good_vs_defects})
+        metrics = self.metrics.get_metrics(mode)
 
         clean_print("Adding scalars to TensorBoard", end="\r")
         for scalar_metric_name, scalar_metric_value in metrics["scalars"].items():

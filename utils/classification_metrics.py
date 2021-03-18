@@ -12,27 +12,28 @@ from .batch_generator import BatchGenerator
 
 
 class ClassificationMetrics(Metrics):
+    """ Class computing usefull metrics for classification like tasks """
     def __init__(self, model: nn.Module, train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator, label_map: Dict[int, str], max_batches: Optional[int] = 10,
-                 n_to_n: bool = False, segmentation: bool = False):
+                 good_vs_defects: bool = False, n_to_n: bool = False, segmentation: bool = False):
         """
-        Class computing usefull metrics for classification tasks
         Args:
-            model: The PyTorch model being trained
-            train_dataloader: DataLoader containing train data
-            val_dataloader: DataLoader containing validation data
-            label_map: Dictionary linking class index to class name
-            max_batches: If not None, then the metrics will be computed using at most this number of batches
-            n_to_n: Used when input is a sequence. True if using one label for each element of the sequence
-            segmentation: Used when doing segmentation.
+            model (nn.Module): The PyTorch model being trained
+            train_dataloader (BatchGenerator): DataLoader containing train data
+            val_dataloader (BatchGenerator): DataLoader containing validation data
+            label_map (dict): Dictionary linking class index to class name
+            max_batches (int): If not None, then the metrics will be computed using at most this number of batches
+            good_vs_defects (bool): If doing defects classification, this expect the "good" class to be 0
+            n_to_n (bool): Used when input is a sequence. True if using one label for each element of the sequence
+            segmentation (bool): Used when doing segmentation.
         """
         super().__init__(model, train_dataloader, val_dataloader, max_batches)
 
         self.label_map = label_map
+        self.good_vs_defects = good_vs_defects
         self.n_to_n = n_to_n
         self.segmentation = segmentation
         self.nb_output_classes = len(label_map)
-        self.max_batches = max_batches
 
     def compute_confusion_matrix(self, mode: str = "Train"):
         """
@@ -148,38 +149,34 @@ class ClassificationMetrics(Metrics):
 
         return img
 
-    def get_metrics(self, mode: str = "Train", good_vs_defects: bool = False, **kwargs) -> dict[str, dict[str, Any]]:
-        """ See base class
-
-        Args:
-            good_vs_defects (bool): If doing defects detection, this expect the "good" class to be 0
-        """
+    def get_metrics(self, mode: str = "Train", **kwargs) -> dict[str, dict[str, Any]]:
+        """ See base class """
         metrics = {"scalars": {}, "imgs": {}}
 
         clean_print("Computing confusion matrix", end="\r")
-        self.metrics.compute_confusion_matrix(mode=mode)
+        self.compute_confusion_matrix(mode=mode)
 
         clean_print("Computing average accuracy", end="\r")
-        avg_acc = self.metrics.get_avg_acc()
+        avg_acc = self.get_avg_acc()
         metrics["scalars"]["Average Accuracy"] = avg_acc
 
         clean_print("Computing per class accuracy", end="\r")
-        per_class_acc = self.metrics.get_class_accuracy()
+        per_class_acc = self.get_class_accuracy()
         for key, acc in enumerate(per_class_acc):
             metrics["scalars"][f"Per Class Accuracy/{self.label_map[key]}"] = acc
 
         if self.segmentation:
             clean_print("Computing per class IOU", end="\r")
-            per_class_iou = self.metrics.get_class_iou()
+            per_class_iou = self.get_class_iou()
             for key, iou in enumerate(per_class_iou):
                 metrics["scalars"][f"Per Class IOU/{self.label_map[key]}"] = iou
 
-        if good_vs_defects:
-            acc = self.metrics.get_group_accuracy()
+        if self.good_vs_defects:
+            acc = self.get_group_accuracy()
             metrics["scalars"]["Defect accuracy"] = acc
 
         clean_print("Creating confusion matrix image", end="\r")
-        confusion_matrix = self.metrics.get_confusion_matrix()
+        confusion_matrix = self.get_confusion_matrix()
         metrics["imgs"]["Confusion Matrix"] = confusion_matrix
 
         return metrics

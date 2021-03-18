@@ -10,7 +10,7 @@ class Metrics(ABC):
     def __init__(self, model: torch.nn.Module, train_dataloader: BatchGenerator, val_dataloader: BatchGenerator,
                  max_batches: Optional[int] = 10):
         """
-        Class computing usefull metrics for classification tasks
+        Class computing usefull metrics
         Args:
             model (torch.nn.Module): The PyTorch model being trained.
             train_dataloader (BatchGenerator): DataLoader containing train data.
