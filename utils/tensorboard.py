@@ -226,7 +226,7 @@ class TensorBoard:
 
         clean_print("Adding images to TensorBoard", end="\r")
         for img_metric_name, img_metric_value in metrics["imgs"].items():
-            tb_writer.add_image(img_metric_value, img_metric_value, global_step=epoch, dataformats="HWC")
+            tb_writer.add_image(img_metric_name, img_metric_value, global_step=epoch, dataformats="HWC")
 
     def write_weights_grad(self, epoch: int):
         """ Writes the model's weights and gradients to tensorboard, if the model can provide them.
