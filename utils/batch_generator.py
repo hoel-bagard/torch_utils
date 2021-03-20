@@ -9,7 +9,6 @@ from typing import (
 )
 from itertools import product
 from time import time
-from math import ceil
 
 import numpy as np
 from torch import Tensor
@@ -69,6 +68,12 @@ class BatchGenerator:
                                                for entry in labels[:batch_size]])
         if self.augmentation_pipeline:
             data_batch, labels_batch = self.augmentation_pipeline(data_batch, labels_batch)
+        if self.gpu_augmentation_pipeline:
+            gpu_data_batch, gpu_labels_batch = self.gpu_augmentation_pipeline(data_batch, labels_batch)
+
+        # The shapes are not used in the BatchGenerator, but they can be accessed by other functions
+        self.data_shape = gpu_data_batch.shape[1:] if self.gpu_augmentation_pipeline else data_batch.shape[1:]
+        self.label_shape = gpu_labels_batch.shape[1:] if self.gpu_augmentation_pipeline else labels_batch.shape[1:]
 
         self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
@@ -188,13 +193,13 @@ class BatchGenerator:
         prefetch_batch_size = self.batch_size if step != self.step_per_epoch else self.last_batch_size
         prefetch_cache = 1 - self._current_cache
         nb_workers = min(self.nb_workers, prefetch_batch_size)  # Do not use all the workers if the batch size is small
-        nb_elts_per_worker = prefetch_batch_size // nb_workers
-        nb_elts_last_worker = nb_elts_per_worker + prefetch_batch_size % nb_workers
+        nb_elts_per_worker = prefetch_batch_size // nb_workers  # Minimum number of samples processed by a given worker
+        remaining_elts = prefetch_batch_size % nb_workers  # The first remaining_elts workers will process 1 more sample
         for worker_idx in range(self.nb_workers):
             if worker_idx < nb_workers:
-                cache_start_index = worker_idx * nb_elts_per_worker
+                cache_start_index = worker_idx * nb_elts_per_worker + min(worker_idx, remaining_elts)
                 indices_start_index = (step-1) * self.batch_size + cache_start_index
-                nb_elts = nb_elts_per_worker if worker_idx != (nb_workers-1) else nb_elts_last_worker
+                nb_elts = nb_elts_per_worker+1 if worker_idx < remaining_elts else nb_elts_per_worker
                 self.worker_pipes[worker_idx][0].send((prefetch_cache, cache_start_index, indices_start_index, nb_elts))
             else:
                 # Send empty instructions to excess workers
@@ -229,6 +234,14 @@ class BatchGenerator:
             data_batch, labels_batch = self.gpu_augmentation_pipeline(data_batch, labels_batch)
 
         return data_batch, labels_batch
+
+    def reset_epoch(self):
+        """ Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)"""
+        self.step = self.step_per_epoch - 1  # Go to the last step of the epoch
+        self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
+        self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
+        self._next_epoch()
+        self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
     def _next_epoch(self):
         """Prepares variables for the next epoch"""
@@ -366,7 +379,8 @@ if __name__ == '__main__':
                     assert len(agg_data) == nb_datapoints, (
                         f"{len(agg_data)} elements appeared instead of {nb_datapoints}")
                     assert set(agg_data) == set(processed_data), (
-                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}")
+                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}"
+                        f"\n{list(set(agg_data))}  (set version)")
                     assert set(agg_labels) == set(processed_labels), (
                         f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
 

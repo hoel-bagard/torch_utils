@@ -27,9 +27,3 @@ def get_config_as_dict(config) -> Dict[str, Any]:
             config_dict[key.lower()] = value
 
     return config_dict
-
-
-# def get_data_config_dict() -> Dict:
-#     # return dict(filter(lambda attr: not attr[0].startswith('__') and attr[0][0].isupper(), vars(DataConfig).items()))
-#     return dict([(key.lower(), value) for key, value in vars(DataConfig).items()
-#                  if not key.startswith('__') and key[0].isupper()])
