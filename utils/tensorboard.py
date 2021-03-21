@@ -11,7 +11,6 @@ import numpy as np
 import torch
 from torch import Tensor
 import torch.nn as nn
-from torch.nn.modules.module import ModuleAttributeError
 from torch.utils.tensorboard import SummaryWriter
 
 from .draw import (
@@ -238,7 +237,7 @@ class TensorBoard:
             for tag, (weight, grad) in self.model.get_weight_and_grads().items():
                 self.train_tb_writer.add_histogram(f"{tag}/weights", weight, epoch)
                 self.train_tb_writer.add_histogram(f"{tag}/gradients", grad, epoch)
-        except ModuleAttributeError:
+        except AttributeError:  # torch.nn.modules.module.ModuleAttributeError:
             if not self.weights_warning_printed:
                 print(f"Warning: The model {self.model.__class__.__name__}"
                       f" does not support recording weights and gradients.")

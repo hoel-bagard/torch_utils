@@ -19,8 +19,8 @@ class BatchGenerator:
                  nb_workers: int = 1,
                  data_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
-                 aug_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
-                 gpu_augmentation_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
+                 cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
+                 gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
                  shuffle: bool = False, verbose: bool = False):
         """
         Args:
@@ -30,8 +30,8 @@ class BatchGenerator:
             nb_workers: Number of workers to use for multiprocessing (>=1).
             data_preprocessing_fn: If not None, data is expected to be paths that will be passed through this function.
             labels_preprocessing_fn: If not None, labels is should be paths that will be passed through this function.
-            aug_pipeline: Function that takes in data and labels and do some data augmentation on them (on cpu, numpy)
-            gpu_augmentation_pipeline: Function that takes in data and labels and do some data augmentation on them.
+            cpu_pipeline: Function that takes in data and labels and do some data augmentation on them (on cpu, numpy)
+            gpu_pipeline: Function that takes in data and labels and do some data augmentation on them.
                                        Should start by transforming numpy arrays into torch Tensors.
         shuffle: If True, then dataset is shuffled for each epoch
             verbose: If true then the BatchGenerator will print debug information
@@ -46,8 +46,8 @@ class BatchGenerator:
         self.nb_workers: Final[int] = nb_workers
         self.data_preprocessing_fn = data_preprocessing_fn
         self.labels_preprocessing_fn = labels_preprocessing_fn
-        self.augmentation_pipeline = aug_pipeline
-        self.gpu_augmentation_pipeline = gpu_augmentation_pipeline
+        self.cpu_pipeline = cpu_pipeline
+        self.gpu_pipeline = gpu_pipeline
 
         # TODOLIST
         # TODO: Add possibility to save dataset as hdf5
@@ -66,14 +66,14 @@ class BatchGenerator:
                                              for entry in data[:batch_size]])
         labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                                for entry in labels[:batch_size]])
-        if self.augmentation_pipeline:
-            data_batch, labels_batch = self.augmentation_pipeline(data_batch, labels_batch)
-        if self.gpu_augmentation_pipeline:
-            gpu_data_batch, gpu_labels_batch = self.gpu_augmentation_pipeline(data_batch, labels_batch)
+        if self.cpu_pipeline:
+            data_batch, labels_batch = self.cpu_pipeline(data_batch, labels_batch)
+        if self.gpu_pipeline:
+            gpu_data_batch, gpu_labels_batch = self.gpu_pipeline(data_batch, labels_batch)
 
         # The shapes are not used in the BatchGenerator, but they can be accessed by other functions
-        self.data_shape = gpu_data_batch.shape[1:] if self.gpu_augmentation_pipeline else data_batch.shape[1:]
-        self.label_shape = gpu_labels_batch.shape[1:] if self.gpu_augmentation_pipeline else labels_batch.shape[1:]
+        self.data_shape = gpu_data_batch.shape[1:] if self.gpu_pipeline else data_batch.shape[1:]
+        self.label_shape = gpu_labels_batch.shape[1:] if self.gpu_pipeline else labels_batch.shape[1:]
 
         self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
@@ -162,8 +162,8 @@ class BatchGenerator:
                     print(f"Worker {worker_index}, labels processed successfully")
 
                 # Do data augmentation if required
-                if self.augmentation_pipeline:
-                    processed_data, processed_labels = self.augmentation_pipeline(processed_data, processed_labels)
+                if self.cpu_pipeline:
+                    processed_data, processed_labels = self.cpu_pipeline(processed_data, processed_labels)
                     if self.verbose > 2:
                         print(f"Worker {worker_index}, data augmentation done successfully")
 
@@ -230,8 +230,8 @@ class BatchGenerator:
         self._prefetch_batch()
 
         # Transform data to tensor on gpu and do some data augmentation if needed
-        if self.gpu_augmentation_pipeline:
-            data_batch, labels_batch = self.gpu_augmentation_pipeline(data_batch, labels_batch)
+        if self.gpu_pipeline:
+            data_batch, labels_batch = self.gpu_pipeline(data_batch, labels_batch)
 
         return data_batch, labels_batch
 
