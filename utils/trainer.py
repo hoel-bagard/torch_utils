@@ -71,7 +71,6 @@ class Trainer:
             step_start_time = time.perf_counter()
             self._print(step, steps_per_epoch, loss, step_time, fetch_time)
 
-        print()  # Clean console for the next print  (logger doesn't handle \n and end=\r very well)
         return epoch_loss / steps_per_epoch
 
     def train_epoch(self):
@@ -91,4 +90,4 @@ class Trainer:
         progress_bar_len = min(terminal_cols - len(pre_string) - len(post_string)-1, 30)
         epoch_progress = int(progress_bar_len * (step/max_steps))
         print(pre_string + f"{epoch_progress*'='}>{(progress_bar_len-epoch_progress)*'.'}" + post_string,
-              end='\r', flush=True)
+              end=('\r' if step < max_steps else '\n'), flush=True)
