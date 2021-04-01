@@ -8,7 +8,9 @@ from typing import (
     Final
 )
 from itertools import product
+import functools
 from time import time
+import signal
 
 import numpy as np
 from torch import Tensor
@@ -37,6 +39,8 @@ class BatchGenerator:
             verbose: If true then the BatchGenerator will print debug information
         """
         self.verbose: Final[bool] = verbose
+        # Handles ctrl+c to have a clean exit.
+        self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
 
         self.data: Final[np.ndarray] = data
         self.labels: Final[np.ndarray] = labels
@@ -52,8 +56,7 @@ class BatchGenerator:
         # TODOLIST
         # TODO: Add possibility to save dataset as hdf5
         # TODO: Add possibility to drop last batch
-        # TODO: Have the prefetch in a workers
-        # TODO: Catch ctrl-c to allow pressing it twice (once to send stop signal and 2 to kill everything)
+        # TODO: Have the prefetch in a worker
 
         self.nb_datapoints: Final[int] = len(self.data)
 
@@ -242,6 +245,16 @@ class BatchGenerator:
         self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
         self._next_epoch()
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
+
+    def init_signal_handling(self, exception_class: type, signal_num: int, handler: Callable):
+        handler = functools.partial(handler, exception_class)
+        signal.signal(signal_num, handler)
+        signal.siginterrupt(signal_num, False)
+
+    def signal_handler(self, exception_class: type, signal_num: int, current_stack_frame):
+        self.release()
+        if self.stop_event.is_set():
+            raise exception_class()
 
     def _next_epoch(self):
         """Prepares variables for the next epoch"""
