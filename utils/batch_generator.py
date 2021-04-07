@@ -285,6 +285,10 @@ class BatchGenerator:
 
     def release(self):
         """Terminates all workers and releases all the shared ressources"""
+        # Terminate cleanly even if there was an error during the initialization
+        if not hasattr(self, "_cache_memory_data"):
+            return
+
         # Closes acces to the shared memories
         for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
             shared_mem.close()
