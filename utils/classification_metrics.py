@@ -36,10 +36,10 @@ class ClassificationMetrics(Metrics):
         self.nb_output_classes = len(label_map)
 
     def compute_confusion_matrix(self, mode: str = "Train"):
-        """
-        Computes the confusion matrix. This function has to be called before using the get functions.
+        """ Computes the confusion matrix. This function has to be called before using the get functions.
+
         Args:
-            mode: Either "Train" or "Validation"
+            mode (str): Either "Train" or "Validation"
         """
         self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
 
@@ -64,30 +64,31 @@ class ClassificationMetrics(Metrics):
                 break
 
     def get_avg_acc(self) -> float:
-        """
-        Uses the confusion matrix to return the average accuracy of the model
+        """ Uses the confusion matrix to return the average accuracy of the model
+
         Returns:
-            avg_acc: Average accuracy
+            float: Average accuracy
         """
         avg_acc = np.sum([self.cm[i, i] for i in range(len(self.cm))]) / np.sum(self.cm)
         return avg_acc
 
     def get_class_accuracy(self) -> List[float]:
-        """
-        Uses the confusion matrix to return the average accuracy of the model
+        """ Uses the confusion matrix to return the average accuracy of the model
+
         Returns:
-            per_class_acc: An array containing the accuracy for each class
+            list: An array containing the accuracy for each class
         """
         per_class_acc = [self.cm[i, i] / max(1, np.sum(self.cm[i])) for i in range(len(self.cm))]
         return per_class_acc
 
     def get_group_accuracy(self, classes: Optional[list[int]] = None) -> float:
-        """
-        Uses the confusion matrix to return the accuracy for the given classes vs the all the others.
+        """ Uses the confusion matrix to return the accuracy for the given classes vs the all the others.
+
         Args:
-            classes: List with the classes that should be grouped together
+            classes (list, optional): List with the classes that should be grouped together
+
         Returns:
-            acc: accuracy for the given group
+            float: Accuracy for the given group
         """
         if not classes:
             classes = np.arange(1, self.nb_output_classes)
@@ -99,11 +100,11 @@ class ClassificationMetrics(Metrics):
         acc = correct / max(1, total)
         return acc
 
-    def get_class_iou(self) -> float:
-        """
-        Uses the confusion matrix to return the iou for each class
+    def get_class_iou(self) -> list[float]:
+        """ Uses the confusion matrix to return the iou for each class
+
         Returns:
-            avg_acc: Average accuracy
+            list: List of the IOU for each class
         """
         intersections = [self.cm[i, i] for i in range(len(self.cm))]
         unions = [np.sum(self.cm[i, :]) + np.sum(self.cm[:, i]) - self.cm[i, i] for i in range(self.nb_output_classes)]
@@ -111,12 +112,11 @@ class ClassificationMetrics(Metrics):
         return per_class_iou
 
     def get_confusion_matrix(self) -> np.ndarray:
-        """
-        Returns an image containing the plotted confusion matrix.
+        """ Returns an image containing the plotted confusion matrix.
         Taken from: https://towardsdatascience.com/exploring-confusion-matrix-evolution-on-tensorboard-e66b39f4ac12
 
         Returns:
-            img: Image of the confusion matrix.
+            np.ndarray: Image of the confusion matrix.
         """
         # Normalize the confusion matrix.
         cm = np.around(self.cm.astype("float") / self.cm.sum(axis=1)[:, np.newaxis], decimals=2)

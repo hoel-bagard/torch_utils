@@ -15,14 +15,14 @@ from .network_utils import layer_init
 class CNNFeatureExtractor(nn.Module):
     def __init__(self, channels: List[int] = [], sizes: List[int] = [], strides: List[int] = [],
                  paddings: List[int] = [], layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
-        """
-        Feature extractor
+        """ Feature extractor
+
         Args:
-            channels: List with the number of channels for each convolution
-            sizes: List with the kernel size for each convolution
-            strides: List with the stride for each convolution
-            padding: List with the padding for each convolution
-            layer_init: Function used to initialise the layers of the network
+            channels (list): List with the number of channels for each convolution
+            sizes (list): List with the kernel size for each convolution
+            strides (list): List with the stride for each convolution
+            padding (list): List with the padding for each convolution
+            layer_init (callable): Function used to initialise the layers of the network
         """
         super().__init__()
 
@@ -41,14 +41,14 @@ class CNNFeatureExtractor(nn.Module):
 class DarknetFeatureExtrator(nn.Module):
     def __init__(self, channels: List[int] = [], blocks: List[int] = [],
                  layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
-        """
-        Feature extractor
+        """ Feature extractor
+
         Args:
-            channels: List with the number of channels for each convolution
-            sizes: List with the kernel size for each convolution
-            strides: List with the stride for each convolution
-            padding: List with the padding for each convolution
-            layer_init: Function used to initialise the layers of the network
+            channels (list): List with the number of channels for each convolution
+            sizes (list): List with the kernel size for each convolution
+            strides (list): List with the stride for each convolution
+            padding (list): List with the padding for each convolution
+            layer_init (callable): Function used to initialise the layers of the network
         """
         super().__init__()
 

@@ -5,6 +5,7 @@ from typing import (
     Optional,
     Callable
 )
+from pathlib import Path
 
 from einops import rearrange
 import numpy as np
@@ -25,24 +26,24 @@ from .batch_generator import BatchGenerator
 
 class TensorBoard:
     # TODO: Fuse sequence_length and grayscale with image_size, call it data_shape
-    def __init__(self, model: nn.Module,  tb_dir: str, image_sizes: Tuple[int, int],
+    def __init__(self, model: nn.Module,  tb_dir: Path, image_sizes: Tuple[int, int],
                  metrics: Optional[Metrics] = None, label_map: Optional[Dict[int, str]] = None,
                  gray_scale: bool = False, color_map: Optional[list[tuple[int, int, int]]] = None,
-                 n_to_n: bool = False, sequence_length: Optional[int] = None, segmentation: bool = True,
+                 n_to_n: bool = False, sequence_length: Optional[int] = None,
                  write_graph: bool = True, max_outputs: int = 4):
         """
-        Class with TensorBoard utility functions.
+        Class with TensorBoard utility functions for classification-like tasks.
+
         Args:
             model (nn.Module): Pytorch model whose performance are to be recorded
-            image_sizes: Dimensions of the input images (width, height), used if writing the model graph
-            metrics: Instance of the Metrics class, used to compute classification metrics
-            label_map: Dictionary linking class index to class name
-            color_map: List linking class index to class color
-            tb_dir: Path to where the tensorboard files will be saved
-            gray_scale: True if using gray scale
-            n_to_n: If using videos, is it N to 1 or N to N
-            sequence_length: If using videos, Number of elements in each sequence
-            segmentation: If doing segmentation
+            tb_dir (Path): Path to where the tensorboard files will be saved
+            image_sizes (tuple): Dimensions of the input images (width, height), used if writing the model graph
+            metrics (Metrics, optional): Instance of the Metrics class, used to compute classification metrics
+            label_map (dict, optional): Dictionary linking class index to class name
+            gray_scale (bool): True if using gray scale
+            color_map (list, optional): List linking class index to class color
+            n_to_n (bool): If using videos, is it N to 1 or N to N
+            sequence_length (int, optional): If using videos, Number of elements in each sequence
             max_outputs (int): Maximal number of images kept and displayed in TensorBoard (per function call)
         """
         super().__init__()
@@ -53,12 +54,11 @@ class TensorBoard:
         self.label_map = label_map
         self.color_map = color_map
         self.n_to_n = n_to_n
-        self.segmentation = segmentation
 
         self.weights_warning_printed: bool = False  # Prints a warning if the network cannot give its weights
 
-        self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
-        self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
+        self.train_tb_writer = SummaryWriter(tb_dir / "Train")
+        self.val_tb_writer = SummaryWriter(tb_dir / "Validation")
         if write_graph:
             print("Adding network graph to TensorBoard")
             if sequence_length:
@@ -204,11 +204,14 @@ class TensorBoard:
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
     def write_metrics(self, epoch: int, mode: str = "Train") -> float:
-        """ Writes accuracy metrics in TensorBoard (for classification like tasks)
+        """ Writes metrics in TensorBoard
 
         Args:
             epoch (int): Current epoch
             mode (str): Either "Train" or "Validation"
+
+        Raises:
+            TypeError: No Metrics instance
 
         Returns:
             float: Average accuracy

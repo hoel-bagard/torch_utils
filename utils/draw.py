@@ -8,15 +8,17 @@ import torch
 
 def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
                   label_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """
-    Draw predictions and labels on the image to help with TensorBoard visualisation.
+    """ Draws predictions and labels on the image to help with TensorBoard visualisation.
+
     Args:
-        imgs: Raw imgs.
-        predictions: Predictions of the network, after softmax but before taking argmax
-        labels: Labels corresponding to the images
-        label_map: Dictionary linking class index to class name
-        size: If given, the images will be resized to this size
-    Returns: images with information written on them
+        imgs (torch.Tensor): Raw imgs.
+        predictions (torch.Tensor): Predictions of the network, after softmax but before taking argmax
+        labels (torch.Tensor): Labels corresponding to the images
+        label_map (dict): Dictionary linking class index to class name
+        size (tuple, optional): If given, the images will be resized to this size
+
+    Returns:
+        np.ndarray: images with information written on them
     """
     imgs: np.ndarray = imgs.cpu().detach().numpy()
     labels: np.ndarray = labels.cpu().detach().numpy()
@@ -26,10 +28,8 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
 
     out_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
-        # Just print the top 3 classes
-        # Gets indices of top 3 pred
-        nb_to_keep = 3 if len(preds) > 3 else 2
-        idx = np.argpartition(preds, -nb_to_keep)[-nb_to_keep:]
+        nb_to_keep = 3 if len(preds) > 3 else 2  # have at most 3 classes printed
+        idx = np.argpartition(preds, -nb_to_keep)[-nb_to_keep:]  # Gets indices of top predictions
         idx = idx[np.argsort(preds[idx])][::-1]
         preds = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
 
@@ -52,16 +52,18 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
                     label_map: dict[int, str], n_to_n: bool = False,
                     size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """
-    Draw predictions and labels on the video to help with TensorBoard visualisation.
+    """ Draws predictions and labels on the video to help with TensorBoard visualisation.
+
     Args:
-        video: Raw video.
-        prediction: Prediction of the network, after softmax but before taking argmax
-        label: Label corresponding to the video
-        label_map: Dictionary linking class index to class name
-        n_to_n: True if using one label for each element of the sequence
-        size: If given, the images will be resized to this size
-    Returns: images with information written on them
+        video (torch.Tensor): Raw video.
+        prediction (torch.Tensor): Prediction of the network, after softmax but before taking argmax
+        label (torch.Tensor): Label corresponding to the video
+        label_map (dict): Dictionary linking class index to class name
+        n_to_n (bool): True if using one label for each element of the sequence
+        size (tuple, optional): If given, the images will be resized to this size
+
+    Returns:
+        np.ndarray: Videos with information written on them
     """
     video: np.ndarray = video.cpu().detach().numpy()
     labels: np.ndarray = label.cpu().detach().numpy()
@@ -101,17 +103,19 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     return new_video
 
 
-def draw_segmentation(input_imgs, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
+def draw_segmentation(input_imgs: torch.Tensor, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
                       color_map: list[tuple[int, int, int]], size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """
-    Recreate the segmentation masks from their one hot representations, and place them next to the original image
+    """ Recreate the segmentation masks from their one hot representations, and place them next to the original image
+
     Args:
-        input_imgs: Images that were fed to the network.
-        one_hot_masks_labels: One hot representation of the label segmentation masks.
-        one_hot_masks_preds: One hot representation of the prediction segmentation masks.
-        color_map: List linking class index to its color
-        size: If given, the images will be resized to this size
-    Returns: RGB segmentation masks and original image (in one image)
+        input_imgs (torch.Tensor): Images that were fed to the network.
+        one_hot_masks_labels (torch.Tensor): One hot representation of the label segmentation masks.
+        one_hot_masks_preds (torch.Tensor): One hot representation of the prediction segmentation masks.
+        color_map (list): List linking class index to its color
+        size (int, optional): If given, the images will be resized to this size
+
+    Returns:
+        np.ndarray: RGB segmentation masks and original image (in one image)
     """
     imgs = rearrange(input_imgs, "b c w h -> b w h c").cpu().detach().numpy()
     imgs = np.asarray(imgs * 255.0, dtype=np.uint8)

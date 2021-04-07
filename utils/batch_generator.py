@@ -17,26 +17,25 @@ from torch import Tensor
 
 
 class BatchGenerator:
-    def __init__(self, data: np.ndarray, labels: np.ndarray, batch_size: int,
-                 nb_workers: int = 1,
+    def __init__(self, data: np.ndarray, labels: np.ndarray, batch_size: int, nb_workers: int = 1,
                  data_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
                  gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
-                 shuffle: bool = False, verbose: bool = False):
+                 shuffle: bool = False, verbose: int = 0):
         """
         Args:
-            data: Numpy array with the data. It can be be only path to the datapoints to load (or other forms of data)
-                  if the loading function is given as data_preprocessing_fn.
-            labels: Numpy array with the labels, as for data it can be not yet fully ready labels.
-            nb_workers: Number of workers to use for multiprocessing (>=1).
-            data_preprocessing_fn: If not None, data is expected to be paths that will be passed through this function.
-            labels_preprocessing_fn: If not None, labels is should be paths that will be passed through this function.
-            cpu_pipeline: Function that takes in data and labels and do some data augmentation on them (on cpu, numpy)
-            gpu_pipeline: Function that takes in data and labels and do some data augmentation on them.
-                                       Should start by transforming numpy arrays into torch Tensors.
-        shuffle: If True, then dataset is shuffled for each epoch
-            verbose: If true then the BatchGenerator will print debug information
+            data (np.ndarray): Numpy array with the data. It can be be only paths to the datapoints to load
+                                (or any other form of data) if the loading function is given as data_preprocessing_fn.
+            labels (np.ndarray): Numpy array with the labels, as for data the labels can be only partially processed
+            nb_workers (int): Number of workers to use for multiprocessing (>=1).
+            data_preprocessing_fn (callable, optional): If not None, data will be passed through this function.
+            labels_preprocessing_fn: If not None, labels will be passed through this function.
+            cpu_pipeline (callable, optional): Function that takes in data and labels and processes them on cpu
+            gpu_pipeline (callable, optional): Function that takes in data and labels and processes them on gpu
+                                               Should start by transforming numpy arrays into torch Tensors.
+            shuffle (bool): If True, then dataset is shuffled for each epoch
+            verbose (int): Verbose level, the higher the number, the more debug information will be printed
         """
         self.verbose: Final[bool] = verbose
         # Handles ctrl+c to have a clean exit.
@@ -60,15 +59,15 @@ class BatchGenerator:
 
         self.nb_datapoints: Final[int] = len(self.data)
 
-        index_list: np.ndarray = np.arange(self.nb_datapoints)
+        index_list = np.arange(self.nb_datapoints)
         if self.shuffle:
             np.random.shuffle(index_list)
 
         # Prepare a batch of data to know its size and shape
-        data_batch: np.ndarray = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
-                                             for entry in data[:batch_size]], dtype=object)
-        labels_batch: np.ndarray = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
-                                               for entry in labels[:batch_size]])
+        data_batch = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
+                                 for entry in data[:batch_size]], dtype=object)
+        labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
+                                   for entry in labels[:batch_size]])
         if self.cpu_pipeline:
             data_batch, labels_batch = self.cpu_pipeline(data_batch, labels_batch)
         if self.gpu_pipeline:
@@ -89,7 +88,7 @@ class BatchGenerator:
         self.step = 0
 
         # Create shared memories for indices, data and labels.
-        self.memories_released = mp.Event()   # TODO: change that to a boolean
+        self.memories_released = mp.Event()   # TODO: change that to a boolean ?
         # For data and labels, 2 memories / caches are required for prefetch to work.
         # (One for the main process to read from, one for the workers to write in)
         self._current_cache = 0
@@ -119,7 +118,7 @@ class BatchGenerator:
         self._process_id = "main"
 
     def _init_workers(self):
-        """Create workers and pipes / events used to communicate with them"""
+        """ Create workers and pipes / events used to communicate with them """
         self.stop_event = mp.Event()
         self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
         self.worker_processes = []
@@ -128,7 +127,7 @@ class BatchGenerator:
             self.worker_processes[-1].start()
 
     def _worker_fn(self, worker_index: int):
-        """ Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory"""
+        """ Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory """
         self._process_id = f"worker_{worker_index}"
         pipe = self.worker_pipes[worker_index][1]
 
@@ -209,7 +208,8 @@ class BatchGenerator:
                 self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
 
     def next_batch(self):
-        """
+        """ Returns the next bach of data
+
         Returns a batch of data, goes to the next epoch when the previous one is finished.
         Does not raise a StopIteration, looping using this function means the loop will never stop.
         """
