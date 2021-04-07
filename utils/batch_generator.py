@@ -78,11 +78,11 @@ class BatchGenerator:
         self.data_shape = gpu_data_batch.shape[1:] if self.gpu_pipeline else data_batch.shape[1:]
         self.label_shape = gpu_labels_batch.shape[1:] if self.gpu_pipeline else labels_batch.shape[1:]
 
-        self.step_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
+        self.steps_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
         if self.last_batch_size == 0:
             self.last_batch_size = self.batch_size
-        self.current_batch_size = self.batch_size if self.step_per_epoch > 1 else self.last_batch_size
+        self.current_batch_size = self.batch_size if self.steps_per_epoch > 1 else self.last_batch_size
 
         self.epoch = 0
         self.global_step = 0
@@ -184,7 +184,7 @@ class BatchGenerator:
     def _prefetch_batch(self):
         """ Start sending intructions to workers to load the next batch while the previous one is being used """
         # Prefetch step is one step ahead of the actual one
-        if self.step < self.step_per_epoch:
+        if self.step < self.steps_per_epoch:
             step = (self.step + 1)
         else:
             step = 1
@@ -193,7 +193,7 @@ class BatchGenerator:
                 np.random.shuffle(self._cache_indices)
 
         # Prepare arguments for workers and send them
-        prefetch_batch_size = self.batch_size if step != self.step_per_epoch else self.last_batch_size
+        prefetch_batch_size = self.batch_size if step != self.steps_per_epoch else self.last_batch_size
         prefetch_cache = 1 - self._current_cache
         nb_workers = min(self.nb_workers, prefetch_batch_size)  # Do not use all the workers if the batch size is small
         nb_elts_per_worker = prefetch_batch_size // nb_workers  # Minimum number of samples processed by a given worker
@@ -214,7 +214,7 @@ class BatchGenerator:
         Does not raise a StopIteration, looping using this function means the loop will never stop.
         """
         # Check if the current epoch is finished. If it is then start a new one.
-        if self.step >= self.step_per_epoch:
+        if self.step >= self.steps_per_epoch:
             self._next_epoch()
 
         self.global_step += 1
@@ -224,7 +224,7 @@ class BatchGenerator:
         for pipe, _ in self.worker_pipes:
             pipe.recv()
 
-        self.current_batch_size = self.batch_size if self.step != self.step_per_epoch else self.last_batch_size
+        self.current_batch_size = self.batch_size if self.step != self.steps_per_epoch else self.last_batch_size
         self._current_cache = (self._current_cache+1) % 2
         data_batch = self._cache_data[self._current_cache][:self.current_batch_size]
         labels_batch = self._cache_labels[self._current_cache][:self.current_batch_size]
@@ -240,7 +240,7 @@ class BatchGenerator:
 
     def reset_epoch(self):
         """ Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)"""
-        self.step = self.step_per_epoch - 1  # Go to the last step of the epoch
+        self.step = self.steps_per_epoch - 1  # Go to the last step of the epoch
         self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
         self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
         self._next_epoch()
@@ -265,7 +265,7 @@ class BatchGenerator:
         return self
 
     def __next__(self):
-        if self.step < self.step_per_epoch:
+        if self.step < self.steps_per_epoch:
             return self.next_batch()
         else:
             self._next_epoch()
@@ -346,7 +346,7 @@ if __name__ == '__main__':
             processed_labels = labels_preprocessing_fn(labels) if labels_preprocessing_fn else labels
 
             # Prepare some variables used for testing
-            step_per_epoch = (nb_datapoints + (batch_size-1)) // batch_size
+            steps_per_epoch = (nb_datapoints + (batch_size-1)) // batch_size
             last_batch_size = nb_datapoints % batch_size if nb_datapoints % batch_size else batch_size
             global_step = 0
 
@@ -370,7 +370,7 @@ if __name__ == '__main__':
                         # Check that variables are what they should be
                         assert global_step == batch_generator.global_step, (
                             f"Global step is {batch_generator.global_step} but should be {global_step}")
-                        expected_epoch = (global_step-1) // step_per_epoch
+                        expected_epoch = (global_step-1) // steps_per_epoch
                         assert batch_generator.epoch == expected_epoch, (
                             f"Epoch is {batch_generator.epoch} but should be {expected_epoch}")
                         assert step == batch_generator.step, (
@@ -378,7 +378,7 @@ if __name__ == '__main__':
 
                         # Check that length  of each batch is as expected
                         assert len(data_batch) == len(labels_batch), "Data and labels' shapes are different"
-                        if step != step_per_epoch:
+                        if step != steps_per_epoch:
                             assert len(data_batch) == batch_size, (
                                 f"Batch size is {len(data_batch)} but should be {batch_size}")
                         else:
