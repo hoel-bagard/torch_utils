@@ -64,8 +64,10 @@ class BatchGenerator:
             np.random.shuffle(index_list)
 
         # Prepare a batch of data to know its size and shape
+        # TODO: The data returned by data_preprocessing_fn might have an inconsistent shape.
+        # TODO: Handling it by adding dtype=object causes issues with opencv, find a work around.
         data_batch = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
-                                 for entry in data[:batch_size]], dtype=object)
+                                 for entry in data[:batch_size]])
         labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                    for entry in labels[:batch_size]])
         if self.cpu_pipeline:
