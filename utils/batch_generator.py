@@ -133,6 +133,13 @@ class BatchGenerator:
         self._process_id = f"worker_{worker_index}"
         pipe = self.worker_pipes[worker_index][1]
 
+        # Reinitialize numpy's random because data augmentation should be different between workers.
+        # (If this is not done, the same data augmentation might be applied to all the elements of a batch for exemple)
+        # Could / Should use:
+        # rng: np.random._generator.Generator = np.random.default_rng()
+        # But then it would need to be passed to all the functions that need it
+        np.random.seed(worker_index)
+
         while not self.stop_event.is_set():
             try:
                 # Check if there is a message to be received. (prevents process from getting stuck)
