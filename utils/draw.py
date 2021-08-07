@@ -33,11 +33,15 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
         idx = idx[np.argsort(preds[idx])][::-1]
         preds = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
 
-        img = np.asarray(img * 255.0, dtype=np.uint8)
+        # TODO: temp code for ImageNet
+        imagenet_mean = np.asarray([0.485, 0.456, 0.406])
+        imagenet_std = np.asarray([0.229, 0.224, 0.225])
+        img = np.asarray((img * imagenet_std + imagenet_mean) * 255.0, dtype=np.uint8)
+
         if size:
             img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
         img = cv2.UMat(img)
-        img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
+        img = cv2.copyMakeBorder(img, 60, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)

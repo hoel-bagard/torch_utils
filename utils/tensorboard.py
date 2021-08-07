@@ -28,7 +28,8 @@ class TensorBoard:
     # TODO: Fuse sequence_length and grayscale with image_size, call it data_shape
     def __init__(self, model: nn.Module,  tb_dir: Path, image_sizes: Tuple[int, int],
                  metrics: Optional[Metrics] = None, label_map: Optional[Dict[int, str]] = None,
-                 gray_scale: bool = False, color_map: Optional[list[tuple[int, int, int]]] = None,
+                 gray_scale: bool = False, img_size: tuple[int, int] = None,
+                 color_map: Optional[list[tuple[int, int, int]]] = None,
                  n_to_n: bool = False, sequence_length: Optional[int] = None,
                  write_graph: bool = True, max_outputs: int = 4):
         """
@@ -41,6 +42,7 @@ class TensorBoard:
             metrics (Metrics, optional): Instance of the Metrics class, used to compute classification metrics
             label_map (dict, optional): Dictionary linking class index to class name
             gray_scale (bool): True if using gray scale
+            img_size: Resizes tensorboard images to that size
             color_map (list, optional): List linking class index to class color
             n_to_n (bool): If using videos, is it N to 1 or N to N
             sequence_length (int, optional): If using videos, Number of elements in each sequence
@@ -52,6 +54,7 @@ class TensorBoard:
         self.metrics = metrics
         self.max_outputs = max_outputs
         self.label_map = label_map
+        self.img_size = img_size
         self.color_map = color_map
         self.n_to_n = n_to_n
 
@@ -121,7 +124,7 @@ class TensorBoard:
             imgs = data
 
         # Write prediction on the images
-        out_imgs = draw_fn(imgs, predictions, labels, **{"label_map": self.label_map})
+        out_imgs = draw_fn(imgs, predictions, labels, **{"label_map": self.label_map}, size=self.img_size)
 
         # Add them to TensorBoard
         for image_index, out_img in enumerate(out_imgs):

@@ -8,6 +8,7 @@ from typing import (
 import torch
 
 from .batch_generator import BatchGenerator
+from .projected_gradient_descent import projected_gradient_descent
 
 
 class Trainer:
@@ -49,6 +50,11 @@ class Trainer:
             self.optimizer.zero_grad()
             if self.on_epoch_begin:
                 self.on_epoch_begin(self)
+
+            if train:
+                inputs = projected_gradient_descent(self.model, inputs, labels, self.loss_fn)
+                # inputs = projected_gradient_descent(self.model, inputs, labels, self.loss_fn, 1, 2, 4, 4, 2)
+                # self.optimizer.zero_grad()  # Not sure if this is good but...
 
             outputs = self.model(inputs)
             loss = self.loss_fn(outputs, labels)

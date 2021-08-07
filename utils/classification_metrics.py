@@ -119,7 +119,8 @@ class ClassificationMetrics(Metrics):
             np.ndarray: Image of the confusion matrix.
         """
         # Normalize the confusion matrix.
-        cm = np.around(self.cm.astype("float") / self.cm.sum(axis=1)[:, np.newaxis], decimals=2)
+        # np.where just removes the zeros. Using a max might be a better idea.
+        cm = np.around(self.cm.astype("float") / np.where(self.cm.sum(axis=1), self.cm.sum(axis=1), 1)[:, np.newaxis], decimals=2)
         class_names = self.label_map.values()
 
         fig = plt.figure(figsize=(8, 8))
@@ -175,8 +176,9 @@ class ClassificationMetrics(Metrics):
             acc = self.get_group_accuracy()
             metrics["scalars"]["Defect accuracy"] = acc
 
-        clean_print("Creating confusion matrix image", end="\r")
-        confusion_matrix = self.get_confusion_matrix()
-        metrics["imgs"]["Confusion Matrix"] = confusion_matrix
+            # Temporarily removed because ImageNet has 1000 classes.....
+        # clean_print("Creating confusion matrix image", end="\r")
+        # confusion_matrix = self.get_confusion_matrix()
+        # metrics["imgs"]["Confusion Matrix"] = confusion_matrix
 
         return metrics
