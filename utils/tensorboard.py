@@ -76,7 +76,7 @@ class TensorBoard:
 
     def write_images(self, epoch: int, dataloader: BatchGenerator,
                      draw_fn: Callable[[Tensor, Tensor], np.ndarray] = draw_pred_img,
-                     mode: str = "Train", input_is_video: bool = False,
+                     mode: str = "Train", input_is_video: bool = False, classification: bool = True,
                      preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
                                                        Tuple[Tensor, Tensor]]] = None) -> None:
@@ -89,6 +89,7 @@ class TensorBoard:
                                 and draws on the images before returning them.
             mode (str): Either "Train" or "Validation"
             input_is_video (bool): If the input data is a video.
+            classification (bool): Adds a softmax after calling the model
             preprocess_fn (callable, optional): Function called before inference.
                                                 Gets data and labels as input, expects them as outputs
             postprocess_fn (callable, optional): Function called after inference.
@@ -106,7 +107,8 @@ class TensorBoard:
 
         # Get some predictions
         predictions = self.model(data.to(self.device))
-        predictions = torch.nn.functional.softmax(predictions, dim=-1)
+        if classification:
+            predictions = torch.nn.functional.softmax(predictions, dim=-1)
         if postprocess_fn:
             data, predictions = postprocess_fn(self, data, predictions)
 
