@@ -11,11 +11,12 @@ from .batch_generator import BatchGenerator
 
 
 class Trainer:
-    """ Trainer class that handles training and validation epochs"""
+    """Trainer class that handles training and validation epochs."""
     def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator, val_dataloader: BatchGenerator,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
-        """
+        """Initialize the trainer instance.
+
         Args:
             model (torch.nn.Module): The PyTorch model to train
             loss_fn (torch.nn.Module): Function used to compute the loss of the model
@@ -34,7 +35,7 @@ class Trainer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def epoch_loop(self, train: bool = True):
-        """ Does a pass on every batch of the train or validation dataset.
+        """Does a pass on every batch of the train or validation dataset.
 
         Args:
             train (bool): Whether it is a train or validation loop.
@@ -70,18 +71,18 @@ class Trainer:
         return epoch_loss / data_loader.steps_per_epoch
 
     def train_epoch(self):
-        """Performs a training epoch"""
+        """Performs a training epoch."""
         return self.epoch_loop()
 
     def val_epoch(self):
-        """Performs a validation epoch"""
+        """Performs a validation epoch."""
         with torch.no_grad():
             epoch_loss = self.epoch_loop(train=False)
         return epoch_loss
 
     @staticmethod
     def _print(step: int, max_steps: int, loss: float, step_time: float, fetch_time: float):
-        """ Prints information related to the current step
+        """Prints information related to the current step.
 
         Args:
             step (int): Current step (within the epoch)

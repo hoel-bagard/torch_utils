@@ -1,14 +1,15 @@
-from pathlib import Path
-from logging import handlers, StreamHandler
 import logging
 import os
 import sys
+from logging import handlers, StreamHandler
+from pathlib import Path
+from typing import Optional
 
 # Mostly taken from https://gitlab.com/corentin-pro/torch_utils/-/tree/master/utils
 
 
 class ConsoleColor(object):
-    """ Simple shortcut to use colors in the console """
+    """Simple shortcut to use colors in the console."""
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     GREEN = '\033[92m'
@@ -20,7 +21,7 @@ class ConsoleColor(object):
 
 
 class ColoredFormatter(logging.Formatter):
-    """ Formatter adding colors to levelname """
+    """Formatter adding colors to levelname."""
     def format(self, record):
         levelno = record.levelno
         if logging.ERROR == levelno:
@@ -38,7 +39,7 @@ class ColoredFormatter(logging.Formatter):
 
 
 class DummyLogger():
-    """ Dummy logger that just outputs the string to stdout """
+    """Dummy logger that just outputs the string to stdout."""
     def debug(self, string, *args):
         print(string, *args)
 
@@ -61,16 +62,30 @@ class DummyLogger():
         print(string, *args)
 
 
-def create_logger(name: str, log_dir: Path, stdout=True):
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    # Add a (rotating) file handler to the logging system
-    file_log_handler = handlers.RotatingFileHandler(log_dir / (name + ".log"), maxBytes=500000, backupCount=2)
-    file_log_handler.setFormatter(log_formatter)
-    file_log_handler.setLevel(logging.DEBUG)
+def create_logger(name: str, log_dir: Optional[Path] = None, stdout: bool = True) -> logging.Logger:
+    """Create a logger.
+
+    Args:
+        name (str): Name of the logger.
+        log_dir (Path, optional): Folder where the logs will be saved if given.
+        stdout (bool): If true then outputs to the stdout.
+
+    Returns:
+        The logger instance.
+    """
+    assert log_dir is not None or stdout, "You need to use at least one of log_dir or stdout"
+
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    logger.addHandler(file_log_handler)
+
+    if log_dir is not None:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        # Add a (rotating) file handler to the logging system
+        file_log_handler = handlers.RotatingFileHandler(log_dir / (name + ".log"), maxBytes=500000, backupCount=2)
+        file_log_handler.setFormatter(log_formatter)
+        file_log_handler.setLevel(logging.DEBUG)
+        logger.addHandler(file_log_handler)
 
     if stdout:
         # Add an handler to the logging system (default has none) : outputing in stdout

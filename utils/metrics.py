@@ -9,7 +9,7 @@ from .batch_generator import BatchGenerator
 class Metrics(ABC):
     def __init__(self, model: torch.nn.Module, train_dataloader: BatchGenerator, val_dataloader: BatchGenerator,
                  max_batches: Optional[int] = 10):
-        """ Class computing usefull metrics
+        """Class computing usefull metrics.
 
         Args:
             model (torch.nn.Module): The PyTorch model being trained.
@@ -27,7 +27,7 @@ class Metrics(ABC):
 
     @abstractmethod
     def get_metrics(self, mode: str = "Train", **kwargs) -> dict[str, dict[str, Any]]:
-        """ Method returning all the metrics the class can provide.
+        """Method returning all the metrics the class can provide.
 
         This Method calls the class's other method to aggregate all the metrics into a dictionnary.
         The dictionnary contains a 2 keys: "scalars" and "imgs".

@@ -1,22 +1,28 @@
 import itertools
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 
-from .misc import clean_print
-from .metrics import Metrics
 from .batch_generator import BatchGenerator
+from .metrics import Metrics
+from .misc import clean_print
 
 
 class ClassificationMetrics(Metrics):
-    """ Class computing usefull metrics for classification like tasks """
-    def __init__(self, model: nn.Module, train_dataloader: BatchGenerator,
-                 val_dataloader: BatchGenerator, label_map: Dict[int, str], max_batches: Optional[int] = 10,
-                 good_vs_defects: bool = False, n_to_n: bool = False, segmentation: bool = False):
-        """
+    """Class computing usefull metrics for classification like tasks."""
+    def __init__(self, model: nn.Module,
+                 train_dataloader: BatchGenerator,
+                 val_dataloader: BatchGenerator,
+                 label_map: Dict[int, str],
+                 max_batches: Optional[int] = 10,
+                 good_vs_defects: bool = False,
+                 n_to_n: bool = False,
+                 segmentation: bool = False):
+        """Initialize the instance.
+
         Args:
             model (nn.Module): The PyTorch model being trained
             train_dataloader (BatchGenerator): DataLoader containing train data
@@ -36,7 +42,7 @@ class ClassificationMetrics(Metrics):
         self.nb_output_classes = len(label_map)
 
     def compute_confusion_matrix(self, mode: str = "Train"):
-        """ Computes the confusion matrix. This function has to be called before using the get functions.
+        """Computes the confusion matrix. This function has to be called before using the get functions.
 
         Args:
             mode (str): Either "Train" or "Validation"
@@ -64,7 +70,7 @@ class ClassificationMetrics(Metrics):
                 break
 
     def get_avg_acc(self) -> float:
-        """ Uses the confusion matrix to return the average accuracy of the model
+        """Uses the confusion matrix to return the average accuracy of the model.
 
         Returns:
             float: Average accuracy
@@ -73,7 +79,7 @@ class ClassificationMetrics(Metrics):
         return avg_acc
 
     def get_class_accuracy(self) -> List[float]:
-        """ Uses the confusion matrix to return the average accuracy of the model
+        """Uses the confusion matrix to return the average accuracy of the model.
 
         Returns:
             list: An array containing the accuracy for each class
@@ -82,7 +88,7 @@ class ClassificationMetrics(Metrics):
         return per_class_acc
 
     def get_group_accuracy(self, classes: Optional[list[int]] = None) -> float:
-        """ Uses the confusion matrix to return the accuracy for the given classes vs the all the others.
+        """Uses the confusion matrix to return the accuracy for the given classes vs the all the others.
 
         Args:
             classes (list, optional): List with the classes that should be grouped together
@@ -101,7 +107,7 @@ class ClassificationMetrics(Metrics):
         return acc
 
     def get_class_iou(self) -> list[float]:
-        """ Uses the confusion matrix to return the iou for each class
+        """Uses the confusion matrix to return the iou for each class.
 
         Returns:
             list: List of the IOU for each class
@@ -112,7 +118,8 @@ class ClassificationMetrics(Metrics):
         return per_class_iou
 
     def get_confusion_matrix(self) -> np.ndarray:
-        """ Returns an image containing the plotted confusion matrix.
+        """Returns an image containing the plotted confusion matrix.
+
         Taken from: https://towardsdatascience.com/exploring-confusion-matrix-evolution-on-tensorboard-e66b39f4ac12
 
         Returns:
@@ -150,7 +157,7 @@ class ClassificationMetrics(Metrics):
         return img
 
     def get_metrics(self, mode: str = "Train", **kwargs) -> dict[str, dict[str, Any]]:
-        """ See base class """
+        """See base class."""
         metrics = {"scalars": {}, "imgs": {}}
 
         clean_print("Computing confusion matrix", end="\r")

@@ -1,14 +1,14 @@
 from typing import Optional
 
 import cv2
-from einops import rearrange
 import numpy as np
 import torch
+from einops import rearrange
 
 
 def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
                   label_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """ Draws predictions and labels on the image to help with TensorBoard visualisation.
+    """.Draws predictions and labels on the image to help with TensorBoard visualisation.
 
     Args:
         imgs (torch.Tensor): Raw imgs.
@@ -53,7 +53,7 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
                     label_map: dict[int, str], n_to_n: bool = False,
                     size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """ Draws predictions and labels on the video to help with TensorBoard visualisation.
+    """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:
         video (torch.Tensor): Raw video.
@@ -106,7 +106,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
 
 def draw_segmentation(input_imgs: torch.Tensor, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
                       color_map: list[tuple[int, int, int]], size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """ Recreate the segmentation masks from their one hot representations, and place them next to the original image
+    """Recreate the segmentation masks from their one hot representations, and place them next to the original image.
 
     Args:
         input_imgs (torch.Tensor): Images that were fed to the network.
@@ -128,7 +128,7 @@ def draw_segmentation(input_imgs: torch.Tensor, one_hot_masks_preds: torch.Tenso
     width, height, _ = imgs[0].shape  # All images are expected to have the same shape
 
     # Create a blank image with some text to explain what things are
-    text_img = np.full((width, height, 3), 255,  dtype=np.uint8)
+    text_img = np.full((width, height, 3), 255, dtype=np.uint8)
     text_img = cv2.putText(text_img, "Top left: input image.", (20, 20),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
     text_img = cv2.putText(text_img, "Top right: label mask", (20, 40),

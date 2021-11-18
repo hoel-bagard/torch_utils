@@ -4,10 +4,10 @@ import subprocess
 from typing import Tuple
 
 
-# Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
 def resource_usage() -> Tuple[int, str]:
-    """ Returns the ressources used by the process
+    """Returns the ressources used by the process.
 
+    Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
     Returns peak RAM usage and VRAM usage at the time this function is called.
     Note that this is different from peak VRAM usage (as this usually happens before the training loop).
 

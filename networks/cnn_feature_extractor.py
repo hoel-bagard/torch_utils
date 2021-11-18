@@ -20,7 +20,7 @@ class CNNFeatureExtractor(nn.Module):
                  paddings: list[Union[int, tuple[int, int, int]]],
                  layer_init: Callable[[nn.Module], None] = layer_init,
                  **kwargs):
-        """ Feature extractor
+        """Feature extractor.
 
         Args:
             channels (list): List with the number of channels for each convolution
@@ -49,7 +49,7 @@ class DarknetFeatureExtrator(nn.Module):
                  blocks: list[int],
                  layer_init: Callable[[nn.Module], None] = layer_init,
                  **kwargs):
-        """ Feature extractor
+        """Feature extractor.
 
         Args:
             channels (list): List with the number of channels for each convolution

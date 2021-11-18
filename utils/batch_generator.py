@@ -1,33 +1,38 @@
-from argparse import ArgumentParser
+import functools
 import multiprocessing as mp
+import signal
+from argparse import ArgumentParser
+from itertools import product
 from multiprocessing import shared_memory
 from pathlib import Path
+from time import time
 from typing import (
     Callable,
-    Optional,
-    Final
+    Final,
+    Optional
 )
-from itertools import product
-import functools
-from time import time
-import signal
 
 import numpy as np
 from torch import Tensor
 
 
 class BatchGenerator:
-    def __init__(self, data: np.ndarray, labels: np.ndarray, batch_size: int, nb_workers: int = 1,
+    def __init__(self, data: np.ndarray,
+                 labels: np.ndarray,
+                 batch_size: int,
+                 nb_workers: int = 1,
                  data_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
                  gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
                  shuffle: bool = False, verbose: int = 0):
-        """
+        """Initialize the batch generator.
+
         Args:
             data (np.ndarray): Numpy array with the data. It can be be only paths to the datapoints to load
                                 (or any other form of data) if the loading function is given as data_preprocessing_fn.
             labels (np.ndarray): Numpy array with the labels, as for data the labels can be only partially processed
+            batch_size (int): The desired batch size.
             nb_workers (int): Number of workers to use for multiprocessing (>=1).
             data_preprocessing_fn (callable, optional): If not None, data will be passed through this function.
             labels_preprocessing_fn: If not None, labels will be passed through this function.
@@ -120,7 +125,7 @@ class BatchGenerator:
         self._process_id = "main"
 
     def _init_workers(self):
-        """ Create workers and pipes / events used to communicate with them """
+        """Create workers and pipes / events used to communicate with them."""
         self.stop_event = mp.Event()
         self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
         self.worker_processes = []
@@ -129,7 +134,7 @@ class BatchGenerator:
             self.worker_processes[-1].start()
 
     def _worker_fn(self, worker_index: int):
-        """ Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory """
+        """Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory."""
         self._process_id = f"worker_{worker_index}"
         pipe = self.worker_pipes[worker_index][1]
 
@@ -190,7 +195,7 @@ class BatchGenerator:
                 break
 
     def _prefetch_batch(self):
-        """ Start sending intructions to workers to load the next batch while the previous one is being used """
+        """Start sending intructions to workers to load the next batch while the previous one is being used."""
         # Prefetch step is one step ahead of the actual one
         if self.step < self.steps_per_epoch:
             step = (self.step + 1)
@@ -217,7 +222,7 @@ class BatchGenerator:
                 self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
 
     def next_batch(self):
-        """ Returns the next bach of data
+        """Return the next bach of data.
 
         Returns a batch of data, goes to the next epoch when the previous one is finished.
         Does not raise a StopIteration, looping using this function means the loop will never stop.
@@ -248,7 +253,7 @@ class BatchGenerator:
         return data_batch, labels_batch
 
     def reset_epoch(self):
-        """ Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)"""
+        """Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)."""
         self.step = self.steps_per_epoch - 1  # Go to the last step of the epoch
         self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
         self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
@@ -266,7 +271,7 @@ class BatchGenerator:
             raise exception_class()
 
     def _next_epoch(self):
-        """Prepares variables for the next epoch"""
+        """Prepare variables for the next epoch."""
         self.epoch += 1
         self.step = 0
 
@@ -293,7 +298,7 @@ class BatchGenerator:
         return self.nb_datapoints
 
     def release(self):
-        """Terminates all workers and releases all the shared ressources"""
+        """Terminate all workers and release all the shared ressources."""
         # Terminate cleanly even if there was an error during the initialization
         if not hasattr(self, "_cache_memory_data"):
             return
@@ -330,7 +335,7 @@ if __name__ == '__main__':
     verbose = args.verbose
 
     def test():
-        """Function used to run tests on the BatchGenerator"""
+        """Function used to run tests on the BatchGenerator."""
         # Prepare mock dataset
         nb_datapoints = 18
         data = np.arange(nb_datapoints)
@@ -361,7 +366,7 @@ if __name__ == '__main__':
 
             with BatchGenerator(data, labels, batch_size, data_preprocessing_fn=data_preprocessing_fn,
                                 nb_workers=nb_workers, shuffle=True, verbose=verbose) as batch_generator:
-                for epoch in range(5):
+                for _epoch in range(5):
                     # Variables used to aggregate dataset
                     agg_data = []
                     agg_labels = []
