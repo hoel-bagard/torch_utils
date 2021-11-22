@@ -1,12 +1,12 @@
 from typing import (
-    Union,
+    Optional,
     Tuple,
-    Optional
+    Union
 )
 
-from einops import rearrange
 import torch
 import torch.nn as nn
+from einops import rearrange
 
 
 class Layer(nn.Module):
@@ -29,7 +29,7 @@ class Layer(nn.Module):
         output = input_data
         if self.activation is not None:
             output = self.activation(output)
-        if self.use_batch_norm:
+        if self.use_batch_norm and self.batch_norm is not None:
             # It is assumed here that if using batch norm, then self.batch_norm has been instanciated.
             output = self.batch_norm(output)
         return output

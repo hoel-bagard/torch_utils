@@ -5,14 +5,21 @@ import torch.nn as nn
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self, input_size, output_size, nhead: int = 4,
-                 dim_feedforward: int = 1024, nlayers: int = 3, dropout=0.1):
-        """
+    def __init__(self, input_size,
+                 output_size,
+                 nhead: int = 4,
+                 dim_feedforward: int = 1024,
+                 nlayers: int = 3,
+                 dropout: float = 0.1):
+        """Initialize the transformer layer.
+
         Args:
             input_size: Input size
             output_size: Output size
             nhead: Number of heads in the multi-head attention layers
             dim_feedforward: Dimension of the FFN model in the encoder layers
+            nlayers (int): .
+            dropout (float): .
         """
         super().__init__()
         self.pos_encoder = PositionalEncoding(input_size, dropout)
