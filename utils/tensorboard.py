@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import (
+    Any,
     Callable,
     Dict,
     Optional,
@@ -25,7 +26,8 @@ from .misc import clean_print
 
 class TensorBoard:
     # TODO: Fuse sequence_length and grayscale with image_size, call it data_shape
-    def __init__(self, model: nn.Module,
+    def __init__(self,
+                 model: nn.Module,
                  tb_dir: Path,
                  image_sizes: Tuple[int, int],
                  metrics: Optional[Metrics] = None,
@@ -79,9 +81,12 @@ class TensorBoard:
         self.train_tb_writer.close()
         self.val_tb_writer.close()
 
-    def write_images(self, epoch: int, dataloader: BatchGenerator,
-                     draw_fn: Callable[[Tensor, Tensor], np.ndarray] = draw_pred_img,
-                     mode: str = "Train", input_is_video: bool = False, classification: bool = True,
+    def write_images(self, epoch: int,
+                     dataloader: BatchGenerator,
+                     draw_fn: Callable[[Tensor, Tensor, Tensor, Optional[Any]], np.ndarray] = draw_pred_img,
+                     mode: str = "Train",
+                     input_is_video: bool = False,
+                     classification: bool = True,
                      preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
                      postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor],
                                                        Tuple[Tensor, Tensor]]] = None) -> None:
@@ -127,8 +132,8 @@ class TensorBoard:
         else:
             imgs = data
 
-        # Write prediction on the images
-        out_imgs = draw_fn(imgs, predictions, labels, **{"label_map": self.label_map})
+        # Write prediction on the images  TODO: see how to type this properly
+        out_imgs = draw_fn(imgs, predictions, labels, **{"label_map": self.label_map})  # type: ignore
 
         # Add them to TensorBoard
         for image_index, out_img in enumerate(out_imgs):
@@ -174,9 +179,11 @@ class TensorBoard:
         for image_index, img in enumerate(out_imgs):
             tb_writer.add_image(f"{mode}/segmentation_output_{image_index}", img, global_step=epoch, dataformats="HWC")
 
-    def write_videos(self, epoch: int, dataloader: BatchGenerator, mode: str = "Train",
-                     preprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None,
-                     postprocess_fn: Optional[Callable[[Tensor, Tensor], Tuple[Tensor, Tensor]]] = None):
+    def write_videos(self, epoch: int,
+                     dataloader: BatchGenerator,
+                     mode: str = "Train",
+                     preprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], tuple[Tensor, Tensor]]] = None,
+                     postprocess_fn: Optional[Callable[["TensorBoard", Tensor, Tensor], tuple[Tensor, Tensor]]] = None):
         """Write a video with predictions written on it to TensorBoard.
 
         Args:
@@ -212,7 +219,7 @@ class TensorBoard:
 
         tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
-    def write_metrics(self, epoch: int, mode: str = "Train") -> float:
+    def write_metrics(self, epoch: int, mode: str = "Train") -> None:
         """Writes metrics in TensorBoard.
 
         Args:
@@ -246,7 +253,7 @@ class TensorBoard:
             epoch (int): Current epoch
         """
         try:
-            for tag, (weight, grad) in self.model.get_weight_and_grads().items():
+            for tag, (weight, grad) in self.model.get_weight_and_grads().items():  # type: ignore
                 self.train_tb_writer.add_histogram(f"{tag}/weights", weight, epoch)
                 self.train_tb_writer.add_histogram(f"{tag}/gradients", grad, epoch)
         except AttributeError:  # torch.nn.modules.module.ModuleAttributeError:

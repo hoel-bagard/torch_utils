@@ -6,23 +6,26 @@ import torch
 from einops import rearrange
 
 
-def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
-                  label_map: dict[int, str], size: Optional[tuple[int, int]] = None) -> np.ndarray:
-    """.Draws predictions and labels on the image to help with TensorBoard visualisation.
+def draw_pred_img(imgs_tensor: torch.Tensor,
+                  predictions_tensor: torch.Tensor,
+                  labels_tensor: torch.Tensor,
+                  label_map: dict[int, str],
+                  size: Optional[tuple[int, int]] = None) -> np.ndarray:
+    """Draws predictions and labels on the image to help with TensorBoard visualisation.
 
     Args:
-        imgs (torch.Tensor): Raw imgs.
-        predictions (torch.Tensor): Predictions of the network, after softmax but before taking argmax
-        labels (torch.Tensor): Labels corresponding to the images
+        imgs_tensor (torch.Tensor): Raw imgs.
+        predictions_tensor (torch.Tensor): Predictions of the network, after softmax but before taking argmax
+        labels_tensor (torch.Tensor): Labels corresponding to the images
         label_map (dict): Dictionary linking class index to class name
         size (tuple, optional): If given, the images will be resized to this size
 
     Returns:
         np.ndarray: images with information written on them
     """
-    imgs: np.ndarray = imgs.cpu().detach().numpy()
-    labels: np.ndarray = labels.cpu().detach().numpy()
-    predictions: np.ndarray = predictions.cpu().detach().numpy()
+    imgs: np.ndarray = imgs_tensor.cpu().detach().numpy()
+    labels: np.ndarray = labels_tensor.cpu().detach().numpy()
+    predictions: np.ndarray = predictions_tensor.cpu().detach().numpy()
 
     imgs = rearrange(imgs, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
 
@@ -50,15 +53,18 @@ def draw_pred_img(imgs: torch.Tensor, predictions: torch.Tensor, labels: torch.T
     return np.asarray(out_imgs)
 
 
-def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
-                    label_map: dict[int, str], n_to_n: bool = False,
+def draw_pred_video(video_tensor: torch.Tensor,
+                    label_tensor: torch.Tensor,
+                    prediction_tensor: torch.Tensor,
+                    label_map: dict[int, str],
+                    n_to_n: bool = False,
                     size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:
         video (torch.Tensor): Raw video.
-        prediction (torch.Tensor): Prediction of the network, after softmax but before taking argmax
         label (torch.Tensor): Label corresponding to the video
+        prediction (torch.Tensor): Prediction of the network, after softmax but before taking argmax
         label_map (dict): Dictionary linking class index to class name
         n_to_n (bool): True if using one label for each element of the sequence
         size (tuple, optional): If given, the images will be resized to this size
@@ -66,16 +72,16 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     Returns:
         np.ndarray: Videos with information written on them
     """
-    video: np.ndarray = video.cpu().detach().numpy()
-    labels: np.ndarray = label.cpu().detach().numpy()
-    preds: np.ndarray = prediction.cpu().detach().numpy()
+    video: np.ndarray = video_tensor.cpu().detach().numpy()
+    labels: np.ndarray = label_tensor.cpu().detach().numpy()
+    preds: np.ndarray = prediction_tensor.cpu().detach().numpy()
     if not n_to_n:
         labels = np.broadcast_to(labels, video.shape[0])
         preds = np.broadcast_to(preds, (video.shape[0], preds.shape[0]))
 
     video = rearrange(video, 'b c h w -> b h w c')
 
-    new_video = []
+    new_video_list = []
     for img, preds, label in zip(video, preds, labels):
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:
@@ -93,9 +99,9 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         img = cv2.putText(img, preds_text, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-        new_video.append(img.get())
+        new_video_list.append(img.get())
 
-    new_video = np.asarray(new_video)
+    new_video = np.asarray(new_video_list)
 
     # Keep a channel dimension if in gray scale mode
     if new_video.ndim == 3:

@@ -101,12 +101,12 @@ class Rearrange(nn.Module):
         else:
             self.permute = True
             left_expr, right_expr = pattern.split(" -> ")
-            right_expr, left_expr = left_expr.split(), right_expr.split()
-            self.pattern = [right_expr.index(symbol) for symbol in left_expr]
+            right_expr_split, left_expr_split = left_expr.split(), right_expr.split()
+            self.permute_pattern = [right_expr_split.index(symbol) for symbol in left_expr_split]
 
     def forward(self, x: torch.Tensor):
         if self.permute:
-            x = x.permute(*self.pattern)
+            x = x.permute(*self.permute_pattern)
         else:
             x = rearrange(x, self.pattern)
         return x

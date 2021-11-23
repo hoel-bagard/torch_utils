@@ -25,7 +25,8 @@ class BatchGenerator:
                  labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
                  cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
                  gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
-                 shuffle: bool = False, verbose: int = 0):
+                 shuffle: bool = False,
+                 verbose_lvl: int = 0):
         """Initialize the batch generator.
 
         Args:
@@ -40,9 +41,9 @@ class BatchGenerator:
             gpu_pipeline (callable, optional): Function that takes in data and labels and processes them on gpu
                                                Should start by transforming numpy arrays into torch Tensors.
             shuffle (bool): If True, then dataset is shuffled for each epoch
-            verbose (int): Verbose level, the higher the number, the more debug information will be printed
+            verbose_lvl (int): Verbose level, the higher the number, the more debug information will be printed
         """
-        self.verbose: Final[bool] = verbose
+        self.verbose_lvl: Final[int] = verbose_lvl
         # Handles ctrl+c to have a clean exit.
         self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
 
@@ -101,20 +102,21 @@ class BatchGenerator:
         self._current_cache = 0
         # Indices
         self._cache_memory_indices = shared_memory.SharedMemory(create=True, size=index_list.nbytes)
-        self._cache_indices = np.ndarray(self.nb_datapoints, dtype=int, buffer=self._cache_memory_indices.buf)
+        self._cache_indices: np.ndarray = np.ndarray(self.nb_datapoints,
+                                                     dtype=int, buffer=self._cache_memory_indices.buf)
         self._cache_indices[:] = index_list
         # Data
         self._cache_memory_data = [
             shared_memory.SharedMemory(create=True, size=data_batch.nbytes),
             shared_memory.SharedMemory(create=True, size=data_batch.nbytes)]
-        self._cache_data = [
+        self._cache_data: list[np.ndarray] = [
             np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[0].buf),
             np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[1].buf)]
         # Labels
         self._cache_memory_labels = [
             shared_memory.SharedMemory(create=True, size=labels_batch.nbytes),
             shared_memory.SharedMemory(create=True, size=labels_batch.nbytes)]
-        self._cache_labels = [
+        self._cache_labels: list[np.ndarray] = [
             np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[0].buf),
             np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[1].buf)]
 
@@ -156,7 +158,7 @@ class BatchGenerator:
                         continue
                 else:
                     continue
-                if self.verbose > 2:
+                if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, Starting to prepare mini-batch of {nb_elts} elements")
 
                 indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
@@ -166,7 +168,7 @@ class BatchGenerator:
                     processed_data = self.data_preprocessing_fn(self.data[indices_to_process])
                 else:
                     processed_data = self.data[indices_to_process]
-                if self.verbose > 2:
+                if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, data processed successfully")
 
                 # Do the same for labels
@@ -174,19 +176,19 @@ class BatchGenerator:
                     processed_labels = self.labels_preprocessing_fn(self.labels[indices_to_process])
                 else:
                     processed_labels = self.labels[indices_to_process]
-                if self.verbose > 2:
+                if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, labels processed successfully")
 
                 # Do data augmentation if required
                 if self.cpu_pipeline:
                     processed_data, processed_labels = self.cpu_pipeline(processed_data, processed_labels)
-                    if self.verbose > 2:
+                    if self.verbose_lvl > 2:
                         print(f"Worker {worker_index}, data augmentation done successfully")
 
                 # Put the mini-batch into the shared memory
                 self._cache_data[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_data
                 self._cache_labels[current_cache][cache_start_index:cache_start_index+nb_elts] = processed_labels
-                if self.verbose > 2:
+                if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, data and labels put to cache successfully")
 
                 # Send signal to the main process to say that everything is ready
@@ -320,7 +322,7 @@ class BatchGenerator:
 
             if not self.memories_released.is_set():
                 # Requests for all the shared memories to be destroyed
-                if self.verbose:
+                if self.verbose_lvl:
                     print("Releasing shared memories")
                 for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
                     shared_mem.unlink()
@@ -329,10 +331,10 @@ class BatchGenerator:
 
 if __name__ == '__main__':
     parser = ArgumentParser("BatchGenerator Test script")
-    parser.add_argument("--verbose", "--v", type=int, default=0, help="Verbose level to use")
+    parser.add_argument("--verbose_lvl", "--v", type=int, default=0, help="Verbose level to use")
     args = parser.parse_args()
 
-    verbose = args.verbose
+    verbose_lvl = args.verbose_lvl
 
     def test():
         """Function used to run tests on the BatchGenerator."""
@@ -352,7 +354,7 @@ if __name__ == '__main__':
         for args in product(*args_lists):
             nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
 
-            if verbose:
+            if verbose_lvl:
                 print(f"\n\nStarting test with {nb_workers=}, {batch_size=}")
 
             # Preprocess data and labels here to do it only once
@@ -365,7 +367,7 @@ if __name__ == '__main__':
             global_step = 0
 
             with BatchGenerator(data, labels, batch_size, data_preprocessing_fn=data_preprocessing_fn,
-                                nb_workers=nb_workers, shuffle=True, verbose=verbose) as batch_generator:
+                                nb_workers=nb_workers, shuffle=True, verbose_lvl=verbose_lvl) as batch_generator:
                 for _epoch in range(5):
                     # Variables used to aggregate dataset
                     agg_data = []
@@ -376,9 +378,9 @@ if __name__ == '__main__':
                         agg_data += list(data_batch)
                         agg_labels += list(labels_batch)
 
-                        if verbose > 1:
+                        if verbose_lvl > 1:
                             print(f"{batch_generator.epoch=}, {batch_generator.step=}")
-                        if verbose > 2:
+                        if verbose_lvl > 2:
                             print(f"{data_batch=}, {labels_batch=}")
 
                         # Check that variables are what they should be

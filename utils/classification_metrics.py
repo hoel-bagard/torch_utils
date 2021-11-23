@@ -158,7 +158,7 @@ class ClassificationMetrics(Metrics):
 
     def get_metrics(self, mode: str = "Train", **kwargs) -> dict[str, dict[str, Any]]:
         """See base class."""
-        metrics = {"scalars": {}, "imgs": {}}
+        metrics: dict[str, dict] = {"scalars": {}, "imgs": {}}
 
         clean_print("Computing confusion matrix", end="\r")
         self.compute_confusion_matrix(mode=mode)

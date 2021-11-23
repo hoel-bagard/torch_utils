@@ -81,7 +81,7 @@ class Trainer:
         return epoch_loss
 
     @staticmethod
-    def _print(step: int, max_steps: int, loss: float, step_time: float, fetch_time: float):
+    def _print(step: int, max_steps: int, loss: torch.Tensor, step_time: float, fetch_time: float):
         """Prints information related to the current step.
 
         Args:
