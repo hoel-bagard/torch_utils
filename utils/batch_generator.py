@@ -46,7 +46,7 @@ class BatchGenerator:
         """
         self.verbose_lvl: Final[int] = verbose_lvl
         # Handles ctrl+c to have a clean exit.
-        self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
+        # self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
 
         self.data: Final[np.ndarray] = data
         self.labels: Final[np.ndarray] = labels

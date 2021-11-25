@@ -69,14 +69,11 @@ class Conv3D(Layer):
 class DarknetResidualBlock(nn.Module):
     def __init__(self, filters):
         super().__init__()
-        self.conv1 = Conv2D(filters, filters//2, 1)
-        self.conv2 = Conv2D(filters//2, filters, 3, padding=1)
+        self.convs = nn.Sequential(Conv2D(filters, filters//2, 1),
+                                   Conv2D(filters//2, filters, 3, padding=1),)
 
     def forward(self, inputs):
-        x = self.conv1(inputs)
-        x = self.conv2(x)
-        x = torch.add(inputs, x)
-        return x
+        return torch.add(inputs, self.convs(inputs))
 
 
 class DarknetBlock(nn.Module):
