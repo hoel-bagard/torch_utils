@@ -17,7 +17,8 @@ from torch import Tensor
 
 
 class BatchGenerator:
-    def __init__(self, data: np.ndarray,
+    def __init__(self,
+                 data: np.ndarray,
                  labels: np.ndarray,
                  batch_size: int,
                  nb_workers: int = 1,
@@ -72,6 +73,8 @@ class BatchGenerator:
         # Prepare a batch of data to know its size and shape
         # TODO: The data returned by data_preprocessing_fn might have an inconsistent shape.
         # TODO: Handling it by adding dtype=object causes issues with opencv, find a work around.
+        if self.verbose_lvl >= 1:
+            print("Preparing the first batch of data.")
         data_batch = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
                                  for entry in data[:batch_size]])
         labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
@@ -95,6 +98,8 @@ class BatchGenerator:
         self.global_step = 0
         self.step = 0
 
+        if self.verbose_lvl >= 1:
+            print("Creating the shared memories and mp related objects.")
         # Create shared memories for indices, data and labels.
         self.memories_released = mp.Event()   # TODO: change that to a boolean ?
         # For data and labels, 2 memories / caches are required for prefetch to work.
