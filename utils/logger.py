@@ -1,11 +1,13 @@
+"""Module used to facilitate the creation of a logger.
+
+Originally taken from https://gitlab.com/corentin-pro/torch_utils/-/tree/master/utils
+"""
 import logging
 import os
 import sys
 from logging import handlers, StreamHandler
 from pathlib import Path
 from typing import Optional
-
-# Mostly taken from https://gitlab.com/corentin-pro/torch_utils/-/tree/master/utils
 
 
 class ConsoleColor(object):
@@ -38,31 +40,10 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-class DummyLogger():
-    """Dummy logger that just outputs the string to stdout."""
-    def debug(self, string, *args):
-        print(string, *args)
-
-    def info(self, string, *args):
-        print(string, *args)
-
-    def warn(self, string, *args):
-        print(string, *args)
-
-    def warning(self, string, *args):
-        print(string, *args)
-
-    def error(self, string, *args):
-        print(string, *args)
-
-    def critical(self, string, *args):
-        print(string, *args)
-
-    def fatal(self, string, *args):
-        print(string, *args)
-
-
-def create_logger(name: str, log_dir: Optional[Path] = None, stdout: bool = True) -> logging.Logger:
+def create_logger(name: str,
+                  log_dir: Optional[Path] = None,
+                  stdout: bool = True,
+                  verbose_level: int = logging.INFO) -> logging.Logger:
     """Create a logger.
 
     Args:
@@ -84,13 +65,11 @@ def create_logger(name: str, log_dir: Optional[Path] = None, stdout: bool = True
         # Add a (rotating) file handler to the logging system
         file_log_handler = handlers.RotatingFileHandler(log_dir / (name + ".log"), maxBytes=500000, backupCount=2)
         file_log_handler.setFormatter(log_formatter)
-        file_log_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_log_handler)
 
     if stdout:
         # Add an handler to the logging system (default has none) : outputing in stdout
         terminal_log_handler = StreamHandler(sys.stdout)
-        terminal_log_handler.setLevel(logging.DEBUG)
         if os.name != 'nt':
             # Fancy color for non windows console
             colored_log_formatter = ColoredFormatter("%(levelname)s - %(message)s")
@@ -98,5 +77,13 @@ def create_logger(name: str, log_dir: Optional[Path] = None, stdout: bool = True
         else:
             terminal_log_handler.setFormatter(log_formatter)
         logger.addHandler(terminal_log_handler)
+
+    match verbose_level:
+        case "debug":
+            logger.setLevel(logging.DEBUG)
+        case "info":
+            logger.setLevel(logging.INFO)
+        case "error":
+            logger.setLevel(logging.ERROR)
 
     return logger
