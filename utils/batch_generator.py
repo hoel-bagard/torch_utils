@@ -72,7 +72,7 @@ class BatchGenerator:
 
         # Prepare a batch of data to know its size and shape
         # TODO: The data returned by data_preprocessing_fn might have an inconsistent shape.
-        # TODO: Handling it by adding dtype=object causes issues with opencv, find a work around.
+        #       Handling it by adding dtype=object causes issues with opencv, find a work around.
         if self.verbose_lvl >= 1:
             print("Preparing the first batch of data.")
         data_batch = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry

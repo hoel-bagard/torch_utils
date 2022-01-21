@@ -12,8 +12,11 @@ from .batch_generator import BatchGenerator
 
 class Trainer:
     """Trainer class that handles training and validation epochs."""
-    def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module, optimizer: torch.optim.Optimizer,
-                 train_dataloader: BatchGenerator, val_dataloader: BatchGenerator,
+    def __init__(self, model: torch.nn.Module,
+                 loss_fn: torch.nn.Module,
+                 optimizer: torch.optim.Optimizer,
+                 train_dataloader: BatchGenerator,
+                 val_dataloader: BatchGenerator,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """Initialize the trainer instance.
 

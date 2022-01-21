@@ -110,8 +110,11 @@ def draw_pred_video(video_tensor: torch.Tensor,
     return new_video
 
 
-def draw_segmentation(input_imgs: torch.Tensor, one_hot_masks_preds: torch.Tensor, one_hot_masks_labels: torch.Tensor,
-                      color_map: list[tuple[int, int, int]], size: Optional[tuple[int, int]] = None) -> np.ndarray:
+def draw_segmentation(input_imgs: torch.Tensor,
+                      one_hot_masks_preds: torch.Tensor,
+                      one_hot_masks_labels: torch.Tensor,
+                      color_map: list[tuple[int, int, int]],
+                      size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """Recreate the segmentation masks from their one hot representations, and place them next to the original image.
 
     Args:
