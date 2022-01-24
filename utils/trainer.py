@@ -17,6 +17,7 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
+                 use_amp: bool = True,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """Initialize the trainer instance.
 
@@ -26,6 +27,7 @@ class Trainer:
             optimizer (torch.optim.Optimizer): Optimizer to use
             train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data
             val_dataloader (BatchGenerator): DataLoader containing  validation data
+            use_amp (bool): If True then use Mixed Precision Training.
             on_epoch_begin (callable): function that will be called at the beginning of every epoch.
         """
         self.model = model
@@ -34,8 +36,12 @@ class Trainer:
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.batch_size = train_dataloader.batch_size
+        self.use_amp = use_amp
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        if use_amp:
+            self.scaler = torch.cuda.amp.GradScaler()
 
     def epoch_loop(self, train: bool = True):
         """Does a pass on every batch of the train or validation dataset.
@@ -54,11 +60,20 @@ class Trainer:
             if self.on_epoch_begin:
                 self.on_epoch_begin(self)
 
-            outputs = self.model(inputs)
-            loss = self.loss_fn(outputs, labels)
-            if train:
-                loss.backward()
-                self.optimizer.step()
+            if self.use_amp:
+                with torch.cuda.amp.autocast():
+                    outputs = self.model(inputs)
+                    loss = self.loss_fn(outputs, labels)
+                if train:
+                    self.scaler.scale(loss).backward()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+            else:
+                outputs = self.model(inputs)
+                loss = self.loss_fn(outputs, labels)
+                if train:
+                    loss.backward()
+                    self.optimizer.step()
             epoch_loss += loss.item()
 
             previous_step_start_time = step_start_time
