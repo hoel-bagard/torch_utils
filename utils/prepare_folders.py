@@ -44,7 +44,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
     # If path not None -> promt to remove if exist
     if tb_dir is not None:
         if tb_dir.exists():
-            delete = yes_no_prompt("TensorBoard folder already exists, do you want to delete it ?")
+            delete = yes_no_prompt(f"TensorBoard folder \"{tb_dir}\" already exists, do you want to delete it ?")
             if delete:
                 while tb_dir.exists():
                     rmtree(tb_dir, ignore_errors=True)
@@ -56,7 +56,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
 
     if checkpoints_dir is not None:
         if checkpoints_dir.exists():
-            delete = yes_no_prompt("Checkpoints folder already exists, do you want to delete it ?")
+            delete = yes_no_prompt(f"Checkpoints folder \"{checkpoints_dir}\" already exists, do you want to delete it ?")
             if delete:
                 while checkpoints_dir.exists():
                     rmtree(checkpoints_dir, ignore_errors=True)
