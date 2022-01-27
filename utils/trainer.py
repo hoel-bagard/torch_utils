@@ -17,7 +17,7 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
-                 use_amp: bool = True,
+                 use_amp: bool = False,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """Initialize the trainer instance.
 
