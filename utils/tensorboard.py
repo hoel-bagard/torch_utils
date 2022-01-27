@@ -37,7 +37,8 @@ class TensorBoard:
                  n_to_n: bool = False,
                  sequence_length: Optional[int] = None,
                  write_graph: bool = True,
-                 max_outputs: int = 4):
+                 max_outputs: int = 4,
+                 denormalize_img_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None):
         """Class with TensorBoard utility functions for classification-like tasks.
 
         Args:
@@ -52,6 +53,7 @@ class TensorBoard:
             sequence_length (int, optional): If using videos, Number of elements in each sequence
             write_graph (bool): If True, add the network graph to the TensorBoard
             max_outputs (int): Maximal number of images kept and displayed in TensorBoard (per function call)
+            denormalize_img_fn (callable): Function to reverse the normalization process, used by the drawing fn.
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -61,6 +63,7 @@ class TensorBoard:
         self.label_map = label_map
         self.color_map = color_map
         self.n_to_n = n_to_n
+        self.denormalize_img_fn = denormalize_img_fn
 
         self.weights_warning_printed: bool = False  # Prints a warning if the network cannot give its weights
 
@@ -173,7 +176,8 @@ class TensorBoard:
         if postprocess_fn:
             data, predictions = postprocess_fn(self, data, predictions)
 
-        out_imgs = draw_segmentation(data, predictions, labels, color_map=self.color_map)
+        out_imgs = draw_segmentation(data, predictions, labels,
+                                     color_map=self.color_map, denormalize_img_fn=self.denormalize_img_fn)
 
         # Add them to TensorBoard
         for image_index, img in enumerate(out_imgs):

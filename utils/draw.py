@@ -1,9 +1,46 @@
-from typing import Optional
+from typing import Callable, Optional
 
 import cv2
 import numpy as np
 import torch
 from einops import rearrange
+
+
+def denormalize_np(img: np.ndarray,
+                   mean: tuple[float, float, float] = (0.485, 0.456, 0.406),
+                   std: tuple[float, float, float] = (0.229, 0.224, 0.225)) -> np.ndarray:
+    """Undo the normalization process on an image.
+
+    Args:
+        img (np.ndarray): The normalized image.
+        mean (tuple): The mean values that were used to normalize the image.
+        std (tuple): The std values that were used to normalize the image.
+
+    Returns:
+        The denormalized image.
+    """
+    std = np.asarray(std)
+    mean = np.asarray(mean)
+    img = img * (255*std) + 255*mean
+    return img.astype(np.uint8)
+
+
+def denormalize_tensor(img: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
+    """Undo the normalization process on an image. The normalization values default to the ImageNet ones.
+
+    Args:
+        img (Tensor): The normalized image.
+        mean (Tensor): The mean values that were used to normalize the image.
+        std (Tensor): The std values that were used to normalize the image.
+
+    Returns:
+        The denormalized image.
+    """
+    mean = mean if mean is not None else torch.tensor((0.485, 0.456, 0.406))
+    std = std if std is not None else torch.tensor((0.229, 0.224, 0.225))
+
+    img = img * (255*std) + 255*mean
+    return img
 
 
 def draw_pred_img(imgs_tensor: torch.Tensor,
@@ -114,6 +151,7 @@ def draw_segmentation(input_imgs: torch.Tensor,
                       one_hot_masks_preds: torch.Tensor,
                       one_hot_masks_labels: torch.Tensor,
                       color_map: list[tuple[int, int, int]],
+                      denormalize_img_fn: Optional[Callable[[np.ndarray], np.ndarray]] = None,
                       size: Optional[tuple[int, int]] = None) -> np.ndarray:
     """Recreate the segmentation masks from their one hot representations, and place them next to the original image.
 
@@ -122,13 +160,18 @@ def draw_segmentation(input_imgs: torch.Tensor,
         one_hot_masks_labels (torch.Tensor): One hot representation of the label segmentation masks.
         one_hot_masks_preds (torch.Tensor): One hot representation of the prediction segmentation masks.
         color_map (list): List linking class index to its color
+        denormalize_img_fn (callable): Function to reverse the normalization process.
         size (int, optional): If given, the images will be resized to this size
 
     Returns:
         np.ndarray: RGB segmentation masks and original image (in one image)
     """
     imgs = rearrange(input_imgs, "b c w h -> b w h c").cpu().detach().numpy()
-    imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
+    if denormalize_img_fn is None:
+        imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
+    else:
+        imgs = denormalize_img_fn(imgs).astype(np.uint8)
+
     one_hot_masks_preds = rearrange(one_hot_masks_preds, "b c w h -> b w h c")
     masks_preds: np.ndarray = torch.argmax(one_hot_masks_preds, dim=-1).cpu().detach().numpy()
     one_hot_masks_labels = rearrange(one_hot_masks_labels, "b c w h -> b w h c")
