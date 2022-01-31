@@ -1,17 +1,12 @@
 from dataclasses import asdict, fields
 from shutil import get_terminal_size
-from typing import (
-    Any,
-    Dict,
-    Optional,
-    Tuple
-)
+from typing import Any
 
 import cv2
 import numpy as np
 
 
-def clean_print(msg: str, fallback: Optional[Tuple[int, int]] = (156, 38), end='\n'):
+def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end='\n'):
     r"""Function that prints the given string to the console and erases any previous print made on the same line.
 
     Args:
@@ -23,7 +18,7 @@ def clean_print(msg: str, fallback: Optional[Tuple[int, int]] = (156, 38), end='
     print(msg + ' ' * (get_terminal_size(fallback=fallback).columns - len(msg)), end=end, flush=True)
 
 
-def get_config_as_dict(config) -> Dict[str, Any]:
+def get_config_as_dict(config) -> dict[str, Any]:
     """Takes a config object and returns it as dictionnary.
 
     Args:
@@ -42,7 +37,7 @@ def get_config_as_dict(config) -> Dict[str, Any]:
     return config_dict
 
 
-def get_dataclass_as_dict(config, lower_case: bool = True) -> Dict[str, Any]:
+def get_dataclass_as_dict(config, lower_case: bool = True) -> dict[str, Any]:
     """Takes a dataclass instance and returns it as a dictionnary.
 
     Args:

@@ -36,6 +36,8 @@ def prepare_folders(tb_dir: Optional[Path] = None,
     For the given paths, if the folder already exists, then promts the user on what to do.
     If the checkpoints_dir path is given, then the project's files are copied in that folder to facilitate future use.
 
+    # TODO: For the config files, have them being passed as arguments (an optional list of Paths)
+
     Args:
         tb_dir (Path, optional): Path to where the TensorBoard folder should be created.
         checkpoints_dir (Path, optional): Path to where the checkpoints folder should be created.
@@ -56,7 +58,8 @@ def prepare_folders(tb_dir: Optional[Path] = None,
 
     if checkpoints_dir is not None:
         if checkpoints_dir.exists():
-            delete = yes_no_prompt(f"Checkpoints folder \"{checkpoints_dir}\" already exists, do you want to delete it ?")
+            delete = yes_no_prompt(f"Checkpoints folder \"{checkpoints_dir}\" already exists,"
+                                   " do you want to delete it ?")
             if delete:
                 while checkpoints_dir.exists():
                     rmtree(checkpoints_dir, ignore_errors=True)
