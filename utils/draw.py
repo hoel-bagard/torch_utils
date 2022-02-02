@@ -25,11 +25,13 @@ def denormalize_np(img: np.ndarray,
     return img.astype(np.uint8)
 
 
-def denormalize_tensor(img: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
-    """Undo the normalization process on an image. The normalization values default to the ImageNet ones.
+def denormalize_tensor(imgs: torch.Tensor,
+                       mean: Optional[torch.Tensor] = None,
+                       std: Optional[torch.Tensor] = None) -> torch.Tensor:
+    """Undo the normalization process on a batch of images. The normalization values default to the ImageNet ones.
 
     Args:
-        img (Tensor): The normalized image.
+        imgs (Tensor): The normalized images.
         mean (Tensor): The mean values that were used to normalize the image.
         std (Tensor): The std values that were used to normalize the image.
 
@@ -39,8 +41,10 @@ def denormalize_tensor(img: torch.Tensor, mean: torch.Tensor, std: torch.Tensor)
     mean = mean if mean is not None else torch.tensor((0.485, 0.456, 0.406))
     std = std if std is not None else torch.tensor((0.229, 0.224, 0.225))
 
-    img = img * (255*std) + 255*mean
-    return img
+    imgs = rearrange(imgs, 'b c w h -> b w h c')
+    imgs = imgs * (255*std) + 255*mean
+    imgs = rearrange(imgs, 'b w h c -> b c w h')
+    return imgs
 
 
 def draw_pred_img(imgs_tensor: torch.Tensor,
@@ -167,9 +171,7 @@ def draw_segmentation(input_imgs: torch.Tensor,
         np.ndarray: RGB segmentation masks and original image (in one image)
     """
     imgs = rearrange(input_imgs, "b c w h -> b w h c").cpu().detach().numpy()
-    if denormalize_img_fn is None:
-        imgs = np.asarray(imgs * 255.0, dtype=np.uint8)
-    else:
+    if denormalize_img_fn is not None:
         imgs = denormalize_img_fn(imgs).astype(np.uint8)
 
     one_hot_masks_preds = rearrange(one_hot_masks_preds, "b c w h -> b w h c")
