@@ -43,13 +43,14 @@ class ColoredFormatter(logging.Formatter):
 def create_logger(name: str,
                   log_dir: Optional[Path] = None,
                   stdout: bool = True,
-                  verbose_level: int = logging.INFO) -> logging.Logger:
+                  verbose_level: str = "info") -> logging.Logger:
     """Create a logger.
 
     Args:
         name (str): Name of the logger.
         log_dir (Path, optional): Folder where the logs will be saved if given.
         stdout (bool): If true then outputs to the stdout.
+        verbose_level (str): Either debug, info, error
 
     Returns:
         The logger instance.
