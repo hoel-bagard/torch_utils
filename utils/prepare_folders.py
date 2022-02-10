@@ -30,18 +30,18 @@ def yes_no_prompt(question: str, default: bool = True) -> bool:
 
 def prepare_folders(tb_dir: Optional[Path] = None,
                     checkpoints_dir: Optional[Path] = None,
-                    repo_name: str = "train_code"):
+                    repo_name: str = "train_code",
+                    extra_files: Optional[list[Path]] = None):
     """Prepare TensorBoard and checkpoints folders.
 
     For the given paths, if the folder already exists, then promts the user on what to do.
     If the checkpoints_dir path is given, then the project's files are copied in that folder to facilitate future use.
 
-    # TODO: For the config files, have them being passed as arguments (an optional list of Paths)
-
     Args:
         tb_dir (Path, optional): Path to where the TensorBoard folder should be created.
         checkpoints_dir (Path, optional): Path to where the checkpoints folder should be created.
         repo_name (str): Name of the project (git repo name), used when checkpoints_dir is given.
+        extra_files (list[Path], optional): List of files that are in the .gitignore but that should still be copied.
     """
     # If path not None -> promt to remove if exist
     if tb_dir is not None:
@@ -72,11 +72,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
         # Note: Using git instead of pure python for simplicity.
         files_to_copy = [p.decode("utf-8") for p in
                          subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()]
-        # Hard code the two config files since I usually put them in the .gitignore.
-        if (data_config_path := Path("config/data_config.py")).exists():
-            files_to_copy.append(str(data_config_path))
-        if (model_config_path := Path("config/model_config.py")).exists():
-            files_to_copy.append(str(model_config_path))
+        files_to_copy.append(*extra_files)  # Files that are in the .gitignore
         output_folder = checkpoints_dir / repo_name
         for file_path in files_to_copy:
             destination_path = output_folder / file_path
