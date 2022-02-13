@@ -71,6 +71,11 @@ class Trainer:
             else:
                 outputs = self.model(inputs)
                 loss = self.loss_fn(outputs, labels)
+                if isinstance(loss, tuple):
+                    # TODO: Keep the losses separate to allow printing them / recording them in the TB.
+                    #       (Still do the backward over the sum, just keep a copy of the tuple.
+                    #        Requires getting the loss names as an optional arg.)
+                    loss = sum(loss)
                 if train:
                     loss.backward()
                     self.optimizer.step()
