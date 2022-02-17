@@ -7,7 +7,8 @@ from .batch_generator import BatchGenerator
 
 
 class Metrics(ABC):
-    def __init__(self, model: torch.nn.Module,
+    def __init__(self,
+                 model: torch.nn.Module,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
                  max_batches: Optional[int] = 10):
