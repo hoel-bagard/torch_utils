@@ -6,47 +6,6 @@ import torch
 from einops import rearrange
 
 
-def denormalize_np(img: np.ndarray,
-                   mean: tuple[float, float, float] = (0.485, 0.456, 0.406),
-                   std: tuple[float, float, float] = (0.229, 0.224, 0.225)) -> np.ndarray:
-    """Undo the normalization process on an image.
-
-    Args:
-        img (np.ndarray): The normalized image.
-        mean (tuple): The mean values that were used to normalize the image.
-        std (tuple): The std values that were used to normalize the image.
-
-    Returns:
-        The denormalized image.
-    """
-    std = np.asarray(std)
-    mean = np.asarray(mean)
-    img = img * (255*std) + 255*mean
-    return img.astype(np.uint8)
-
-
-def denormalize_tensor(imgs: torch.Tensor,
-                       mean: Optional[torch.Tensor] = None,
-                       std: Optional[torch.Tensor] = None) -> torch.Tensor:
-    """Undo the normalization process on a batch of images. The normalization values default to the ImageNet ones.
-
-    Args:
-        imgs (Tensor): The normalized images.
-        mean (Tensor): The mean values that were used to normalize the image.
-        std (Tensor): The std values that were used to normalize the image.
-
-    Returns:
-        The denormalized image.
-    """
-    mean = mean if mean is not None else torch.tensor((0.485, 0.456, 0.406))
-    std = std if std is not None else torch.tensor((0.229, 0.224, 0.225))
-
-    imgs = rearrange(imgs, 'b c w h -> b w h c')
-    imgs = imgs * (255*std) + 255*mean
-    imgs = rearrange(imgs, 'b w h c -> b c w h')
-    return imgs
-
-
 def draw_pred_img(imgs_tensor: torch.Tensor,
                   predictions_tensor: torch.Tensor,
                   labels_tensor: torch.Tensor,
