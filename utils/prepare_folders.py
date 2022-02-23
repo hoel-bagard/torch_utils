@@ -72,7 +72,8 @@ def prepare_folders(tb_dir: Optional[Path] = None,
         # Note: Using git instead of pure python for simplicity.
         files_to_copy = list([Path(p.decode("utf-8")) for p in
                               subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()])
-        files_to_copy.extend(extra_files)  # Files that are in the .gitignore
+        if extra_files is not None:
+            files_to_copy.extend(extra_files)  # Files that are in the .gitignore
         output_folder = checkpoints_dir / repo_name
         for file_path in files_to_copy:
             destination_path = output_folder / file_path

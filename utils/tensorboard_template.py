@@ -1,4 +1,5 @@
 from abc import ABC
+from logging import Logger
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +18,7 @@ class TensorBoard(ABC):
                  tb_dir: Path,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
+                 logger: Logger,
                  metrics: Optional[Metrics] = None,
                  write_graph: bool = True):
         """Class with TensorBoard utility functions for classification-like tasks.
@@ -24,25 +26,27 @@ class TensorBoard(ABC):
         Args:
             model (nn.Module): Pytorch model whose performance are to be recorded
             tb_dir (Path): Path to where the tensorboard files will be saved
-            train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data.
-            val_dataloader (BatchGenerator): DataLoader containing  validation data.
+            train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data
+            val_dataloader (BatchGenerator): DataLoader containing  validation data
+            logger (Logger): Used to print things.
             metrics (Metrics, optional): Instance of the Metrics class, used to compute classification metrics
             write_graph (bool): If True, add the network graph to the TensorBoard
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = model
-        self.metrics = metrics
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
+        self.logger = logger
+        self.metrics = metrics
 
         self.weights_warning_printed: bool = False  # Prints a warning if the network cannot give its weights
 
         self.train_tb_writer = SummaryWriter(tb_dir / "Train")
         self.val_tb_writer = SummaryWriter(tb_dir / "Validation")
         if write_graph:
-            print("Adding network graph to TensorBoard")
-            dummy_input = (torch.empty(2, *train_dataloader.data_shape, device=self.device), )
+            self.logger.info("Adding network graph to TensorBoard")
+            dummy_input = (torch.empty(2, *self.train_dataloader.data_shape, device=self.device), )
             self.train_tb_writer.add_graph(model, dummy_input)
             self.train_tb_writer.flush()
 
