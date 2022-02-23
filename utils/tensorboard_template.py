@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import torch
 import torch.nn as nn
