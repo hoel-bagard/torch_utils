@@ -37,8 +37,8 @@ class TensorBoard(ABC):
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        self.metrics = metrics
         self.logger = logger
+        self.metrics = metrics
 
         self.weights_warning_printed: bool = False  # Prints a warning if the network cannot give its weights
 
