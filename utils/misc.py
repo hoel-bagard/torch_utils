@@ -2,9 +2,6 @@ from dataclasses import asdict, fields
 from shutil import get_terminal_size
 from typing import Any
 
-import cv2
-import numpy as np
-
 
 def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end='\n'):
     r"""Function that prints the given string to the console and erases any previous print made on the same line.
