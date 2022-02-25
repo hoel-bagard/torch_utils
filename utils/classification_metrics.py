@@ -48,8 +48,8 @@ class ClassificationMetrics(Metrics):
             mode (str): Either "Train" or "Validation"
         """
         self.cm = np.zeros((self.nb_output_classes, self.nb_output_classes))
-
-        for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
+        dataloader = self.train_dataloader if mode == "Train" else self.val_dataloader
+        for step, batch in enumerate(dataloader, start=1):
             data_batch, labels_batch = batch[0].float(), batch[1]
             predictions_batch = self.model(data_batch.to(self.device))
 
@@ -68,6 +68,7 @@ class ClassificationMetrics(Metrics):
                     self.cm[label_pixel, pred_pixel] += 1
             if self.max_batches and step >= self.max_batches:
                 break
+        dataloader.reset_epoch()  # Reset the epoch to not cause issues for other functions
 
     def get_avg_acc(self) -> float:
         """Uses the confusion matrix to return the average accuracy of the model.
