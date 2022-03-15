@@ -46,5 +46,4 @@ def get_dataclass_as_dict(config, lower_case: bool = True) -> dict[str, Any]:
     """
     if lower_case:
         return dict((field.name.lower(), getattr(config, field.name)) for field in fields(config))
-    else:
-        return asdict(config)
+    return asdict(config)

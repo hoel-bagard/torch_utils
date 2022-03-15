@@ -267,7 +267,8 @@ class BatchGenerator:
         self._next_epoch()
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
-    def init_signal_handling(self, exception_class: type, signal_num: int, handler: Callable):
+    @staticmethod
+    def init_signal_handling(exception_class: type, signal_num: int, handler: Callable):
         handler = functools.partial(handler, exception_class)
         signal.signal(signal_num, handler)
         signal.siginterrupt(signal_num, False)
@@ -288,9 +289,8 @@ class BatchGenerator:
     def __next__(self):
         if self.step < self.steps_per_epoch:
             return self.next_batch()
-        else:
-            self._next_epoch()
-            raise StopIteration
+        self._next_epoch()
+        raise StopIteration
 
     def __del__(self):
         self.release()

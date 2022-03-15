@@ -30,7 +30,7 @@ def summary(model: nn.Module, input_shape: Union[list[int], Any], line_lenght: i
 
     def register_hook(module):
         def hook(module, inputs, output):
-            class_name = str(module.__class__).split(".")[-1].split("'")[0]
+            class_name = str(module.__class__).rsplit(".", maxsplit=1)[-1].split("'")[0]
             module_idx = len(summary)
 
             m_key = f"{class_name}-{module_idx+1}"

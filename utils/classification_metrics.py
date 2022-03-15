@@ -35,6 +35,7 @@ class ClassificationMetrics(Metrics):
         """
         super().__init__(model, train_dataloader, val_dataloader, max_batches)
 
+        self.cm: np.ndarray  # Confusion Matrix
         self.label_map = label_map
         self.good_vs_defects = good_vs_defects
         self.n_to_n = n_to_n

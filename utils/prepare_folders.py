@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import time
 from pathlib import Path
 from shutil import copy, rmtree
@@ -53,7 +54,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
                     time.sleep(0.5)
             else:
                 print(f"TensorBoard dir {tb_dir} will not be overwritten, exiting.")
-                exit()
+                sys.exit(0)
         tb_dir.mkdir(parents=True, exist_ok=False)
 
     if checkpoints_dir is not None:
@@ -66,12 +67,12 @@ def prepare_folders(tb_dir: Optional[Path] = None,
                     time.sleep(0.5)
             else:
                 print(f"Checkpoints dir {checkpoints_dir} will not be overwritten, exiting.")
-                exit()
+                sys.exit(0)
 
         # Makes a copy of all the code (and config) so that the checkpoints are easy to load and use
         # Note: Using git instead of pure python for simplicity.
-        files_to_copy = list([Path(p.decode("utf-8")) for p in
-                              subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()])
+        files_to_copy = list(Path(p.decode("utf-8")) for p in
+                             subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines())
         if extra_files is not None:
             files_to_copy.extend(extra_files)  # Files that are in the .gitignore
         output_folder = checkpoints_dir / repo_name

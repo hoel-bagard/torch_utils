@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 
-class ConsoleColor(object):
+class ConsoleColor:
     """Simple shortcut to use colors in the console."""
     HEADER = '\033[95m'
     BLUE = '\033[94m'

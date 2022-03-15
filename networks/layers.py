@@ -36,9 +36,15 @@ class Layer(nn.Module):
 
 
 class Conv2D(Layer):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3,
-                 stride: Union[int, Tuple[int, int]] = 1, padding: Union[int, Tuple[int, int]] = 0,
-                 activation=0, use_batch_norm: bool = None, **kwargs):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: int = 3,
+                 stride: Union[int, Tuple[int, int]] = 1,
+                 padding: Union[int, Tuple[int, int]] = 0,
+                 activation=0,
+                 use_batch_norm: bool = None,
+                 **kwargs):
         super().__init__(activation, use_batch_norm)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride,
                               padding=padding, bias=not self.use_batch_norm)
@@ -46,14 +52,20 @@ class Conv2D(Layer):
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
             track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
 
-    def forward(self, x):
-        return super().forward(self.conv(x))
+    def forward(self, input_data):
+        return super().forward(self.conv(input_data))
 
 
 class Conv3D(Layer):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, Tuple[int, int, int]] = 3,
-                 stride: Union[int, Tuple[int, int, int]] = 1, padding: Union[int, Tuple[int, int, int]] = 0,
-                 activation=0, use_batch_norm: bool = None, **kwargs):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: Union[int, Tuple[int, int, int]] = 3,
+                 stride: Union[int, Tuple[int, int, int]] = 1,
+                 padding: Union[int, Tuple[int, int, int]] = 0,
+                 activation=0,
+                 use_batch_norm: bool = None,
+                 **kwargs):
         super().__init__(activation, use_batch_norm)
 
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding,

@@ -18,7 +18,7 @@ class CNNFeatureExtractor(nn.Module):
                  sizes: list[Union[int, tuple[int, int, int]]],
                  strides: list[Union[int, tuple[int, int, int]]],
                  paddings: list[Union[int, tuple[int, int, int]]],
-                 layer_init: Callable[[nn.Module], None] = layer_init,
+                 layer_init_fn: Callable[[nn.Module], None] = layer_init,
                  **kwargs):
         """Feature extractor.
 
@@ -27,7 +27,7 @@ class CNNFeatureExtractor(nn.Module):
             sizes (list): List with the kernel size for each convolution
             strides (list): List with the stride for each convolution
             paddings (list): List with the padding for each convolution
-            layer_init (callable): Function used to initialise the layers of the network
+            layer_init_fn (callable): Function used to initialise the layers of the network
         """
         super().__init__()
 
@@ -36,7 +36,7 @@ class CNNFeatureExtractor(nn.Module):
                                       for i in range(0, len(channels)-1)])
 
         if layer_init:
-            self.apply(layer_init)
+            self.apply(layer_init_fn)
 
     def forward(self, inputs):
         x = self.blocks(inputs)
@@ -47,14 +47,14 @@ class DarknetFeatureExtrator(nn.Module):
     def __init__(self,
                  channels: list[int],
                  blocks: list[int],
-                 layer_init: Callable[[nn.Module], None] = layer_init,
+                 layer_init_fn: Callable[[nn.Module], None] = layer_init,
                  **kwargs):
         """Feature extractor.
 
         Args:
             channels (list): List with the number of channels for each convolution
             blocks (list): List the number of residual block in each darknet block
-            layer_init (callable): Function used to initialise the layers of the network
+            layer_init_fn (callable): Function used to initialise the layers of the network
         """
         super().__init__()
 
@@ -62,7 +62,7 @@ class DarknetFeatureExtrator(nn.Module):
                                       for i in range(0, len(channels)-1)])
 
         if layer_init:
-            self.apply(layer_init)
+            self.apply(layer_init_fn)
 
     def forward(self, inputs):
         x = self.blocks(inputs)

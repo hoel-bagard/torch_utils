@@ -1,10 +1,5 @@
 import math
-from typing import (
-    List,
-    Optional,
-    Tuple,
-    Union
-)
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -38,12 +33,13 @@ def layer_init(layer: nn.Module, weight_gain: float = 1, bias_const: float = 0,
         layer.bias.data.zero_()
 
 
-def get_cnn_output_size(image_sizes: Tuple[int, int],
-                        sizes: List[int],
-                        strides: List[int],
-                        paddings: List[int],
+def get_cnn_output_size(image_sizes: tuple[int, int],
+                        sizes: list[int],
+                        strides: list[int],
+                        paddings: list[int],
                         output_channels: Optional[int] = None,
-                        dense: bool = True, **kwargs) -> Union[int, Tuple[int, int]]:
+                        dense: bool = True,
+                        **kwargs) -> int | tuple[int, int]:
     """Computes the output size of a cnn  (flattened).
 
     Args:
@@ -64,5 +60,4 @@ def get_cnn_output_size(image_sizes: Tuple[int, int],
     if dense:
         assert output_channels, "The output_channels argument is required in the 'dense' case."
         return width*height*output_channels
-    else:
-        return (width, height)
+    return (width, height)

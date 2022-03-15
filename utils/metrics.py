@@ -54,4 +54,3 @@ class Metrics(ABC):
         Returns:
             dict: The dictionnary containing the metrics the class provides
         """
-        pass
