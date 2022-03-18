@@ -6,6 +6,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 import torch
 
 from .batch_generator import BatchGenerator
@@ -47,7 +48,7 @@ class Trainer:
         if use_amp:
             self.scaler = torch.cuda.amp.GradScaler()
 
-    def epoch_loop(self, train: bool = True):
+    def epoch_loop(self, train: bool = True) -> npt.NDArray[np.float32] | float:
         """Does a pass on every batch of the train or validation dataset.
 
         Args:
@@ -79,7 +80,7 @@ class Trainer:
                 if train:
                     total_loss.backward()
                     self.optimizer.step()
-            epoch_losses += [loss.item() for loss in losses]
+            epoch_losses += total_loss.item()
 
             previous_step_start_time = step_start_time
             if step_time:
@@ -89,9 +90,10 @@ class Trainer:
                 step_time = 1000*(time.perf_counter() - step_start_time)
                 fetch_time = 1000*(data_loading_finished_time - previous_step_start_time)
             step_start_time = time.perf_counter()
-            self._print(step, data_loader.steps_per_epoch, losses, self.loss_names, step_time, fetch_time)
+            self._print(step, data_loader.steps_per_epoch, losses if isinstance(losses, tuple) else (losses,), self.loss_names, step_time, fetch_time)
 
-        return epoch_losses / data_loader.steps_per_epoch
+        epoch_losses = epoch_losses / data_loader.steps_per_epoch
+        return epoch_losses if len(epoch_losses) > 1 else float(epoch_losses)  # For backward compatibility
 
     def train_epoch(self):
         """Performs a training epoch."""
