@@ -5,6 +5,7 @@ from typing import (
     Optional
 )
 
+import numpy as np
 import torch
 
 from .batch_generator import BatchGenerator
@@ -18,6 +19,7 @@ class Trainer:
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
                  use_amp: bool = False,
+                 loss_names: Optional[list[str]] = None,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """Initialize the trainer instance.
 
@@ -28,6 +30,7 @@ class Trainer:
             train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data
             val_dataloader (BatchGenerator): DataLoader containing  validation data
             use_amp (bool): If True then use Mixed Precision Training.
+            loss_names: List with the name for each loss component.
             on_epoch_begin (callable): function that will be called at the beginning of every epoch.
         """
         self.model = model
@@ -36,6 +39,7 @@ class Trainer:
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.batch_size = train_dataloader.batch_size
+        self.loss_names = loss_names if loss_names is not None else ["Loss"]
         self.use_amp = use_amp
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -49,7 +53,7 @@ class Trainer:
         Args:
             train (bool): Whether it is a train or validation loop.
         """
-        epoch_loss = 0.0
+        epoch_losses = np.zeros(len(self.loss_names), dtype=np.float32)
         self.model.train(train)
         data_loader = self.train_dataloader if train else self.val_dataloader
         step_time, fetch_time = None, None
@@ -70,16 +74,12 @@ class Trainer:
                     self.scaler.update()
             else:
                 outputs = self.model(inputs)
-                loss = self.loss_fn(outputs, labels)
-                if isinstance(loss, tuple):
-                    # TODO: Keep the losses separate to allow printing them / recording them in the TB.
-                    #       (Still do the backward over the sum, just keep a copy of the tuple.
-                    #        Requires getting the loss names as an optional arg.)
-                    loss = sum(loss)
+                losses = self.loss_fn(outputs, labels)
+                total_loss = torch.sum(torch.tensor(losses, requires_grad=True)) if isinstance(losses, tuple) else losses
                 if train:
-                    loss.backward()
+                    total_loss.backward()
                     self.optimizer.step()
-            epoch_loss += loss.item()
+            epoch_losses += [loss.item() for loss in losses]
 
             previous_step_start_time = step_start_time
             if step_time:
@@ -89,9 +89,9 @@ class Trainer:
                 step_time = 1000*(time.perf_counter() - step_start_time)
                 fetch_time = 1000*(data_loading_finished_time - previous_step_start_time)
             step_start_time = time.perf_counter()
-            self._print(step, data_loader.steps_per_epoch, loss, step_time, fetch_time)
+            self._print(step, data_loader.steps_per_epoch, losses, self.loss_names, step_time, fetch_time)
 
-        return epoch_loss / data_loader.steps_per_epoch
+        return epoch_losses / data_loader.steps_per_epoch
 
     def train_epoch(self):
         """Performs a training epoch."""
@@ -104,19 +104,20 @@ class Trainer:
         return epoch_loss
 
     @staticmethod
-    def _print(step: int, max_steps: int, loss: torch.Tensor, step_time: float, fetch_time: float):
+    def _print(step: int, max_steps: int, losses: tuple, loss_names: list[str], step_time: float, fetch_time: float):
         """Prints information related to the current step.
 
         Args:
             step (int): Current step (within the epoch)
             max_steps (int): Number of steps in the current epoch
-            loss (float): Loss of current step
+            losses: Tuple with the loss(es) for the current step.
+            loss_names: List with the name for each loss component.
             step_time (float): Time it took to perform the whole step
             fetch_time (float): Time it took to load the data for the step
         """
         pre_string = f"{step}/{max_steps} ["
-        post_string = (f"],  Loss: {loss.item():.3e}  -  Step time: {step_time:.2f}ms"
-                       f"  -  Fetch time: {fetch_time:.2f}ms    ")
+        post_string = "],  " + ",  ".join([f"{name}: {loss.item():.3e}" for name, loss in zip(loss_names, losses)])
+        post_string += f"  -  Step time: {step_time:.2f}ms  -  Fetch time: {fetch_time:.2f}ms    "
         terminal_cols = shutil.get_terminal_size(fallback=(156, 38)).columns
         progress_bar_len = min(terminal_cols - len(pre_string) - len(post_string)-1, 30)
         epoch_progress = int(progress_bar_len * (step/max_steps))
