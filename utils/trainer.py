@@ -76,11 +76,11 @@ class Trainer:
             else:
                 outputs = self.model(inputs)
                 losses = self.loss_fn(outputs, labels)
-                total_loss = torch.sum(torch.tensor(losses, requires_grad=True)) if isinstance(losses, tuple) else losses
+                total_loss: torch.Tensor = sum(losses) if isinstance(losses, tuple) else losses
                 if train:
                     total_loss.backward()
                     self.optimizer.step()
-            epoch_losses += total_loss.item()
+            epoch_losses += [loss.item() for loss in losses]
 
             previous_step_start_time = step_start_time
             if step_time:
@@ -90,7 +90,8 @@ class Trainer:
                 step_time = 1000*(time.perf_counter() - step_start_time)
                 fetch_time = 1000*(data_loading_finished_time - previous_step_start_time)
             step_start_time = time.perf_counter()
-            self._print(step, data_loader.steps_per_epoch, losses if isinstance(losses, tuple) else (losses,), self.loss_names, step_time, fetch_time)
+            self._print(step, data_loader.steps_per_epoch, losses if isinstance(losses, tuple) else (losses,),
+                        self.loss_names, step_time, fetch_time)
 
         epoch_losses = epoch_losses / data_loader.steps_per_epoch
         return epoch_losses if len(epoch_losses) > 1 else float(epoch_losses)  # For backward compatibility
