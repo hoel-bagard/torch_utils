@@ -1,8 +1,6 @@
 import functools
 import multiprocessing as mp
 import signal
-from argparse import ArgumentParser
-from itertools import product
 from multiprocessing import shared_memory
 from pathlib import Path
 from time import time
@@ -27,6 +25,7 @@ class BatchGenerator:
                  cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
                  gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
                  shuffle: bool = False,
+                 seed: int = 0,
                  verbose_lvl: int = 0):
         """Initialize the batch generator.
 
@@ -41,38 +40,40 @@ class BatchGenerator:
             cpu_pipeline (callable, optional): Function that takes in data and labels and processes them on cpu
             gpu_pipeline (callable, optional): Function that takes in data and labels and processes them on gpu
                                                Should start by transforming numpy arrays into torch Tensors.
-            shuffle (bool): If True, then dataset is shuffled for each epoch
+            shuffle (bool): If True, then dataset is shuffled for each epoch.
+            seed (int): Seed to use if shuffling is enabled.
             verbose_lvl (int): Verbose level, the higher the number, the more debug information will be printed
         """
-        self.verbose_lvl: Final[int] = verbose_lvl
         # Handles ctrl+c to have a clean exit.
         # self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
 
         self.data: Final[np.ndarray] = data
         self.labels: Final[np.ndarray] = labels
-
         self.batch_size: Final[int] = batch_size
-        self.shuffle: Final[bool] = shuffle
         self.nb_workers: Final[int] = nb_workers
         self.data_preprocessing_fn = data_preprocessing_fn
         self.labels_preprocessing_fn = labels_preprocessing_fn
         self.cpu_pipeline = cpu_pipeline
         self.gpu_pipeline = gpu_pipeline
+        self.shuffle: Final[bool] = shuffle
+        self.seed = seed
+        self.verbose_lvl: Final[int] = verbose_lvl
 
         # TODOLIST
-        # TODO: Add possibility to save dataset as hdf5
         # TODO: Add possibility to drop last batch
         # TODO: Have the prefetch in a worker
 
         self.nb_datapoints: Final[int] = len(self.data)
+        self.epoch = 0
+        self.global_step = 0
+        self.step = 0
 
         index_list = np.arange(self.nb_datapoints)
         if self.shuffle:
-            np.random.shuffle(index_list)
+            rng = np.random.default_rng(self.seed + self.epoch)  # Make the shuffle deterministic
+            rng.shuffle(index_list)
 
         # Prepare a batch of data to know its size and shape
-        # TODO: The data returned by data_preprocessing_fn might have an inconsistent shape.
-        #       Handling it by adding dtype=object causes issues with opencv, find a work around.
         if self.verbose_lvl >= 1:
             print("Preparing the first batch of data.")
         data_batch = np.asarray([data_preprocessing_fn(entry) if data_preprocessing_fn else entry
@@ -93,10 +94,6 @@ class BatchGenerator:
         if self.last_batch_size == 0:
             self.last_batch_size = self.batch_size
         self.current_batch_size = self.batch_size if self.steps_per_epoch > 1 else self.last_batch_size
-
-        self.epoch = 0
-        self.global_step = 0
-        self.step = 0
 
         if self.verbose_lvl >= 1:
             print("Creating the shared memories and mp related objects.")
@@ -210,7 +207,8 @@ class BatchGenerator:
             step = 1
             # Here is the true beginning of the new epoch as far as data preparation is concerned, hence the shuffle
             if self.shuffle:
-                np.random.shuffle(self._cache_indices)
+                rng = np.random.default_rng(self.seed + self.epoch)
+                rng.shuffle(self._cache_indices)
 
         # Prepare arguments for workers and send them
         prefetch_batch_size = self.batch_size if step != self.steps_per_epoch else self.last_batch_size
@@ -273,7 +271,7 @@ class BatchGenerator:
         signal.signal(signal_num, handler)
         signal.siginterrupt(signal_num, False)
 
-    def signal_handler(self, exception_class: type, signal_num: int, current_stack_frame):
+    def signal_handler(self, exception_class: type, _signal_num: int, _current_stack_frame):
         self.release()
         if self.stop_event.is_set():
             raise exception_class()
@@ -334,14 +332,14 @@ class BatchGenerator:
                 self.memories_released.set()
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser("BatchGenerator Test script")
-    parser.add_argument("--verbose_lvl", "--v", type=int, default=0, help="Verbose level to use")
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+    from itertools import product
+    parser = ArgumentParser(description="BatchGenerator Test script")
+    parser.add_argument("--verbose_lvl", "-v", type=int, default=0, help="Verbose level to use")
     args = parser.parse_args()
 
-    verbose_lvl = args.verbose_lvl
-
-    def test():
+    def _test(verbose_lvl: int):
         """Function used to run tests on the BatchGenerator."""
         # Prepare mock dataset
         nb_datapoints = 18
@@ -356,7 +354,7 @@ if __name__ == '__main__':
 
         # Put all the variables into a list, then use itertools to get all the possible combinations
         args_lists = [workers, batch_sizes, data_preprocessing_fns, labels_preprocessing_fns]
-        for args in product(*args_lists):
+        for args in product(*args_lists):  # type: ignore
             nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
 
             if verbose_lvl:
@@ -422,4 +420,4 @@ if __name__ == '__main__':
                     assert set(agg_labels) == set(processed_labels), (
                         f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
 
-    test()
+    _test(args.verbose_lvl)
