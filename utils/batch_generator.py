@@ -1,4 +1,5 @@
 import functools
+import math
 import multiprocessing as mp
 import signal
 from multiprocessing import shared_memory
@@ -26,6 +27,8 @@ class BatchGenerator:
                  gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
                  shuffle: bool = False,
                  seed: int = 0,
+                 size: int = 1,
+                 rank: int = 0,
                  verbose_lvl: int = 0):
         """Initialize the batch generator.
 
@@ -42,6 +45,8 @@ class BatchGenerator:
                                                Should start by transforming numpy arrays into torch Tensors.
             shuffle (bool): If True, then dataset is shuffled for each epoch.
             seed (int): Seed to use if shuffling is enabled.
+            size (int): Number of processes participating in distributed training. (1 if not using distributed training)
+            rank (int): Rank of the current process. (0 if not using distributed training)
             verbose_lvl (int): Verbose level, the higher the number, the more debug information will be printed
         """
         # Handles ctrl+c to have a clean exit.
@@ -57,18 +62,25 @@ class BatchGenerator:
         self.gpu_pipeline = gpu_pipeline
         self.shuffle: Final[bool] = shuffle
         self.seed = seed
+        self.size = size
+        self.rank = rank
         self.verbose_lvl: Final[int] = verbose_lvl
 
-        # TODOLIST
-        # TODO: Add possibility to drop last batch
-        # TODO: Have the prefetch in a worker
-
-        self.nb_datapoints: Final[int] = len(self.data)
+        # Actual size of the dataset
+        self.total_nb_datapoints: Final[int] = len(self.data)
+        # "Dataset size" for each distributed process.
+        # All processes have the same size to not get empty batches for some while others still have data.
+        self.nb_datapoints: Final[int] = math.ceil(len(self.data) / self.size)
+        # self.nb_datapoints: Final[int] = math.ceil(len(data) / size) if rank < len(data) % size else len(data) // size
         self.epoch = 0
         self.global_step = 0
         self.step = 0
 
-        index_list = np.arange(self.nb_datapoints)
+        # The index list comprises the entire dataset, but each distributed process only uses a subset of it.
+        # This subset starts at start_offset. The offset for the "last" rank means that there might be a few datapoints
+        # that appear twice during an epoch, but that's good enough for now.
+        self.start_offset = rank * self.nb_datapoints if rank != size-1 else len(data) - self.nb_datapoints
+        index_list = np.arange(self.total_nb_datapoints)
         if self.shuffle:
             rng = np.random.default_rng(self.seed + self.epoch)  # Make the shuffle deterministic
             rng.shuffle(index_list)
@@ -104,7 +116,7 @@ class BatchGenerator:
         self._current_cache = 0
         # Indices
         self._cache_memory_indices = shared_memory.SharedMemory(create=True, size=index_list.nbytes)
-        self._cache_indices: np.ndarray = np.ndarray(self.nb_datapoints,
+        self._cache_indices: np.ndarray = np.ndarray(self.total_nb_datapoints,
                                                      dtype=int, buffer=self._cache_memory_indices.buf)
         self._cache_indices[:] = index_list
         # Data
@@ -219,7 +231,7 @@ class BatchGenerator:
         for worker_idx in range(self.nb_workers):
             if worker_idx < nb_workers:
                 cache_start_index = worker_idx * nb_elts_per_worker + min(worker_idx, remaining_elts)
-                indices_start_index = (step-1) * self.batch_size + cache_start_index
+                indices_start_index = self.start_offset + (step-1) * self.batch_size + cache_start_index
                 nb_elts = nb_elts_per_worker+1 if worker_idx < remaining_elts else nb_elts_per_worker
                 self.worker_pipes[worker_idx][0].send((prefetch_cache, cache_start_index, indices_start_index, nb_elts))
             else:
@@ -261,7 +273,7 @@ class BatchGenerator:
         """Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)."""
         self.step = self.steps_per_epoch - 1  # Go to the last step of the epoch
         self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
-        self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
+        self.global_step -= 1  # Do not count the extra step done in next_batch() in the global counter
         self._next_epoch()
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
