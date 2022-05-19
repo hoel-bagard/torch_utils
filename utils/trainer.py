@@ -14,7 +14,8 @@ from .batch_generator import BatchGenerator
 
 class Trainer:
     """Trainer class that handles training and validation epochs."""
-    def __init__(self, model: torch.nn.Module,
+    def __init__(self,
+                 model: torch.nn.Module,
                  loss_fn: torch.nn.Module,
                  optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator,
@@ -80,7 +81,7 @@ class Trainer:
                 if train:
                     total_loss.backward()
                     self.optimizer.step()
-            epoch_losses += [loss.item() for loss in losses]
+            epoch_losses += [loss.item() for loss in losses] if isinstance(losses, tuple) else [losses.item()]
 
             previous_step_start_time = step_start_time
             if step_time:
