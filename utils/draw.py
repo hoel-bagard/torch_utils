@@ -82,15 +82,15 @@ def draw_pred_video(video_tensor: torch.Tensor,
     video = rearrange(video, 'b c h w -> b h w c')
 
     new_video_list = []
-    for img, preds, label in zip(video, preds, labels):
+    for img, pred, label in zip(video, preds, labels):
         # If there are too many classes, just print the top 3 ones
-        if len(preds) > 5:
+        if len(pred) > 5:
             # Gets indices of top 3 pred
-            idx = np.argpartition(preds, -3)[-3:]
-            idx = idx[np.argsort(preds[idx])][::-1]
-            preds_text = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
+            idx = np.argpartition(pred, -3)[-3:]
+            idx = idx[np.argsort(pred[idx])][::-1]
+            preds_text = str([label_map[i] + f":  {round(float(pred[i]), 2)}" for i in idx])
         else:
-            preds_text = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
+            preds_text = str([round(float(conf), 2) for conf in pred]) + f"  ==> {np.argmax(pred)}"
 
         img = np.asarray(img * 255.0, dtype=np.uint8)
         if size:
