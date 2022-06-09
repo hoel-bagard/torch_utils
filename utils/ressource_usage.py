@@ -1,5 +1,9 @@
 import os
-import resource
+try:
+    import resource
+except ModuleNotFoundError:
+    # The resource module is available only on unix systems.
+    pass
 import subprocess
 from typing import Tuple
 
@@ -14,7 +18,10 @@ def resource_usage() -> Tuple[int, str]:
     Returns:
         tuple: Peak memory usage and peak gpu usage
     """
-    memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    try:
+        memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    except NameError:
+        pass
     gpu_memory = subprocess.check_output(
         "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()
     if "CUDA_VISIBLE_DEVICES" in os.environ:
