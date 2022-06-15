@@ -34,6 +34,7 @@ class TensorBoard(ABC):
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.tb_dir = tb_dir
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -114,3 +115,43 @@ class TensorBoard(ABC):
             lr (float): Learning rate for the given epoch
         """
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
+
+    def write_config(self, config: dict[str, int | float | str | bool | torch.Tensor],
+                     metrics: dict[str, float] = None):
+        """Writes the config to the TensorBoard.
+
+        Args:
+            config: The config to add to the TensorBoard.
+            metrics: The metrics for this run.
+        """
+        # Add the config as hparams at the end (when exiting) and add the last metrics.
+        self.train_tb_writer.add_hparams(config, metrics, run_name=self.tb_dir.name)
+        # w.add_hparams({'lr': 0.1*i, 'bsize': i},
+        #               {'hparam/accuracy': 10*i, 'hparam/loss': 10*i})
+
+
+if __name__ == "__main__":
+    def _main():
+        import argparse
+        from .logger import create_logger
+        parser = argparse.ArgumentParser(description=("Script to test the Tensorboard template. "
+                                                      "Run with 'python -m utils.tensorboard_template'."),
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser.add_argument("--output_path", "-o", type=Path, default=Path("tb_temp"),
+                            help="Path to where the TB file will be saved")
+        parser.add_argument("--verbose_level", "-v", choices=["debug", "info", "error"], default="info", type=str,
+                            help="Logger level.")
+        args = parser.parse_args()
+
+        output_path: Path = args.output_path
+
+        logger = create_logger("Test TB", verbose_level=args.verbose_level)
+
+        def _test_config():
+            config = {"lr": 4e-3, "image width": 224}
+            metrics = {"hparam/Final Acc": 0.99, "hparam/Precision": 0.2}
+            tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)
+            tensorboard.write_config(config, metrics)
+            logger.info(f"Tested the config writing part. TB can be found at {output_path}")
+        _test_config()
+    _main()
