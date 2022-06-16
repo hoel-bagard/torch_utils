@@ -119,7 +119,7 @@ class TensorBoard(ABC):
 
     def write_config(self,
                      config: dict[str, int | float | str | bool | torch.Tensor | list[float | int] | tuple],
-                     metrics: dict[str, float] = None):
+                     metrics: Optional[dict[str, float]] = None):
         """Writes the config to the TensorBoard.
 
         Args:
@@ -141,10 +141,11 @@ class TensorBoard(ABC):
             else:
                 fixed_config[key] = value
 
-        # run_name already uses the names of the TB writer
-        config_tb_writer = SummaryWriter(self.tb_dir.parent)
-        print(fixed_config)
-        config_tb_writer.add_hparams(fixed_config, metrics, run_name=self.tb_dir.name)
+        config_tb_writer = SummaryWriter(self.tb_dir)
+        config_tb_writer.add_hparams(fixed_config, metrics if metrics is not None else {"None": 0}, run_name="Config")
+        # Config as text looks like garbage in pytorch (TF version looks nice though)
+        # for key, value in config.items():
+        #     config_tb_writer.add_text(f"Config/{key}", str(value))
         config_tb_writer.close()
 
 
