@@ -3,6 +3,7 @@ from logging import Logger
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
@@ -34,6 +35,7 @@ class TensorBoard(ABC):
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.tb_dir = tb_dir
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -114,3 +116,58 @@ class TensorBoard(ABC):
             lr (float): Learning rate for the given epoch
         """
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
+
+    def write_config(self,
+                     config: dict[str, int | float | str | bool | torch.Tensor | list[float | int] | tuple],
+                     metrics: Optional[dict[str, float]] = None):
+        """Writes the config (and optionally metrics) to the TensorBoard.
+
+        Args:
+            config: The config to add to the TensorBoard.
+                    The config's values should be "simple" values.
+                    If a tuple/list is given, it will either be split up into several values or transformed into an str.
+            metrics: The metrics for this run.
+        """
+        fixed_config: dict[str, int | float | str | bool | torch.Tensor] = {}
+        for key, value in config.items():
+            if isinstance(value, (tuple, list, np.ndarray)):
+                if len(value) < 3:
+                    if isinstance(value, np.ndarray):
+                        value = value.tolist()  # Convert from numpy types to python ones
+                    for i in range(len(value)):
+                        fixed_config[key + f"[{i}]"] = float(value[i])
+                else:
+                    fixed_config[key] = str(value)
+            else:
+                fixed_config[key] = value
+
+        config_tb_writer = SummaryWriter(self.tb_dir)
+        config_tb_writer.add_hparams(fixed_config, metrics if metrics is not None else {"None": 0}, run_name="Config")
+        config_tb_writer.close()
+
+
+if __name__ == "__main__":
+    def _main():
+        import argparse
+        from .logger import create_logger
+        parser = argparse.ArgumentParser(description=("Script to test the Tensorboard template. "
+                                                      "Run with 'python -m utils.tensorboard_template'."),
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser.add_argument("--output_path", "-o", type=Path, default=Path("tb_temp"),
+                            help="Path to where the TB file will be saved")
+        parser.add_argument("--verbose_level", "-v", choices=["debug", "info", "error"], default="info", type=str,
+                            help="Logger level.")
+        args = parser.parse_args()
+
+        output_path: Path = args.output_path
+
+        logger = create_logger("Test TB", verbose_level=args.verbose_level)
+
+        def _test_config():
+            config = {"lr": 4e-3, "Batch Size": 32, "image_sizes": (224, 224)}
+            metrics = {"Final/Accuracy": 0.99, "Final/counter": 3}
+            tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)
+            tensorboard.write_config(config, metrics)
+            logger.info(f"Tested the config writing part. TB can be found at {output_path}")
+        _test_config()
+    _main()
