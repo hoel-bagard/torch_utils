@@ -3,6 +3,7 @@ from logging import Logger
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
@@ -116,18 +117,35 @@ class TensorBoard(ABC):
         """
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
 
-    def write_config(self, config: dict[str, int | float | str | bool | torch.Tensor],
+    def write_config(self,
+                     config: dict[str, int | float | str | bool | torch.Tensor | list[float | int] | tuple],
                      metrics: dict[str, float] = None):
         """Writes the config to the TensorBoard.
 
         Args:
             config: The config to add to the TensorBoard.
+                    The config's values should be "simple" values.
+                    If a tuple/list is given, it will either be split up into several values or transformed into an str.
             metrics: The metrics for this run.
         """
-        # Add the config as hparams at the end (when exiting) and add the last metrics.
-        self.train_tb_writer.add_hparams(config, metrics, run_name=self.tb_dir.name)
-        # w.add_hparams({'lr': 0.1*i, 'bsize': i},
-        #               {'hparam/accuracy': 10*i, 'hparam/loss': 10*i})
+        fixed_config: dict[str, int | float | str | bool | torch.Tensor] = {}
+        for key, value in config.items():
+            if isinstance(value, (tuple, list, np.ndarray)):
+                if len(value) < 3:
+                    if isinstance(value, np.ndarray):
+                        value = value.tolist()  # Convert from numpy types to python ones
+                    for i in range(len(value)):
+                        fixed_config[key + f"[{i}]"] = float(value[i])
+                else:
+                    fixed_config[key] = str(value)
+            else:
+                fixed_config[key] = value
+
+        # run_name already uses the names of the TB writer
+        config_tb_writer = SummaryWriter(self.tb_dir.parent)
+        print(fixed_config)
+        config_tb_writer.add_hparams(fixed_config, metrics, run_name=self.tb_dir.name)
+        config_tb_writer.close()
 
 
 if __name__ == "__main__":
@@ -148,8 +166,8 @@ if __name__ == "__main__":
         logger = create_logger("Test TB", verbose_level=args.verbose_level)
 
         def _test_config():
-            config = {"lr": 4e-3, "image width": 224}
-            metrics = {"hparam/Final Acc": 0.99, "hparam/Precision": 0.2}
+            config = {"lr": 4e-3, "Batch Size": 32, "image_sizes": (224, 224)}
+            metrics = {"Final/Accuracy": 0.99, "Final/counter": 3}
             tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)
             tensorboard.write_config(config, metrics)
             logger.info(f"Tested the config writing part. TB can be found at {output_path}")
