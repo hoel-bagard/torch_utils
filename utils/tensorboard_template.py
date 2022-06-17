@@ -138,8 +138,10 @@ class TensorBoard(ABC):
                         fixed_config[key + f"[{i}]"] = float(value[i])
                 else:
                     fixed_config[key] = str(value)
-            else:
+            elif isinstance(value, int | float | str | bool | torch.Tensor):
                 fixed_config[key] = value
+            else:  # For things like None or other random types
+                fixed_config[key] = str(value)
 
         config_tb_writer = SummaryWriter(self.tb_dir)
         config_tb_writer.add_hparams(fixed_config, metrics if metrics is not None else {"None": 0}, run_name="Config")
