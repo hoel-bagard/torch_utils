@@ -5,10 +5,10 @@ except ModuleNotFoundError:
     # The resource module is available only on unix systems.
     pass
 import subprocess
-from typing import Tuple
+from subprocess import CalledProcessError
 
 
-def resource_usage() -> Tuple[int, str]:
+def resource_usage() -> tuple[int, str | None]:
     """Returns the ressources used by the process.
 
     Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
@@ -16,17 +16,20 @@ def resource_usage() -> Tuple[int, str]:
     Note that this is different from peak VRAM usage (as this usually happens before the training loop).
 
     Returns:
-        tuple: Peak memory usage and peak gpu usage
+        tuple: Peak memory usage and peak GPU usage (if a GPU is present, otherwise None)
     """
     try:
         memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     except NameError:
         pass
-    gpu_memory = subprocess.check_output(
-        "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()
-    if "CUDA_VISIBLE_DEVICES" in os.environ:
-        gpu_memory = gpu_memory.split('\n')[int(os.environ["CUDA_VISIBLE_DEVICES"])]
-    else:
-        gpu_memory = ' '.join(gpu_memory.split('\n'))
+    try:
+        gpu_memory = subprocess.check_output(
+            "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()
+        if "CUDA_VISIBLE_DEVICES" in os.environ:
+            gpu_memory = gpu_memory.split('\n')[int(os.environ["CUDA_VISIBLE_DEVICES"])]
+        else:
+            gpu_memory = ' '.join(gpu_memory.split('\n'))
+    except CalledProcessError:
+        gpu_memory = None
 
     return memory_peak, gpu_memory
