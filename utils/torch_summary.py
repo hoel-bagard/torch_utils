@@ -1,15 +1,19 @@
 """Taken from https://github.com/sksq96/pytorch-summary."""
 
 from collections import OrderedDict
-from typing import Any, Optional, Union
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
 
 
-def summary(model: nn.Module, input_shape: Union[list[int], Any], line_length: int = 64,
-            batch_size: int = -1, device: Optional[torch.device] = None, dtypes: torch.tensortype = None) -> list[str]:
+def summary(model: nn.Module,
+            input_shape: tuple[int, ...] | list[tuple[int], ...],
+            line_length: int = 64,
+            batch_size: int = -1,
+            device: Optional[torch.device] = None,
+            dtypes: torch.tensortype = None) -> list[str]:
     """Make a summary of the given model.
 
     # TODO: Get the layers' names (they appear when simply printing a model)
