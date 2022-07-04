@@ -3,7 +3,7 @@ from shutil import get_terminal_size
 from typing import Any
 
 
-def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end='\n'):
+def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end: str = '\n'):
     r"""Function that prints the given string to the console and erases any previous print made on the same line.
 
     Args:
@@ -15,7 +15,7 @@ def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end='\n'):
     print(msg + ' ' * (get_terminal_size(fallback=fallback).columns - len(msg)), end=end, flush=True)
 
 
-def get_config_as_dict(config) -> dict[str, Any]:
+def get_config_as_dict(config: object) -> dict[str, Any]:
     """Takes a config object and returns it as dictionnary.
 
     Args:
@@ -31,10 +31,10 @@ def get_config_as_dict(config) -> dict[str, Any]:
         if not key.startswith('__') and key[0].isupper():
             config_dict[key.lower()] = value
 
-    return config_dict
+    return config_dict  # type: ignore
 
 
-def get_dataclass_as_dict(config, lower_case: bool = True) -> dict[str, Any]:
+def get_dataclass_as_dict(config: object, lower_case: bool = True) -> dict[str, Any]:
     """Takes a dataclass instance and returns it as a dictionnary.
 
     Args:

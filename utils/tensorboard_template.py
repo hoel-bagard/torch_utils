@@ -13,6 +13,9 @@ from .metrics import Metrics
 from .misc import clean_print
 
 
+AcceptedConfigTypes = int | float | str | bool | torch.Tensor
+
+
 class TensorBoard(ABC):
     def __init__(self,
                  model: nn.Module,
@@ -118,7 +121,7 @@ class TensorBoard(ABC):
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
 
     def write_config(self,
-                     config: dict[str, int | float | str | bool | torch.Tensor | list[float | int] | tuple],
+                     config: dict[str, AcceptedConfigTypes | list[float | int] | tuple[float | int, ...]],
                      metrics: Optional[dict[str, float]] = None):
         """Writes the config (and optionally metrics) to the TensorBoard.
 
@@ -128,7 +131,7 @@ class TensorBoard(ABC):
                     If a tuple/list is given, it will either be split up into several values or transformed into an str.
             metrics: The metrics for this run.
         """
-        fixed_config: dict[str, int | float | str | bool | torch.Tensor] = {}
+        fixed_config: dict[str, AcceptedConfigTypes] = {}
         for key, value in config.items():
             if isinstance(value, (tuple, list, np.ndarray)):
                 if len(value) < 3:
@@ -168,8 +171,8 @@ if __name__ == "__main__":
         def _test_config():
             config = {"lr": 4e-3, "Batch Size": 32, "image_sizes": (224, 224)}
             metrics = {"Final/Accuracy": 0.99, "Final/counter": 3}
-            tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)
-            tensorboard.write_config(config, metrics)
+            tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)  # type: ignore
+            tensorboard.write_config(config, metrics)  # type: ignore
             logger.info(f"Tested the config writing part. TB can be found at {output_path}")
         _test_config()
     _main()

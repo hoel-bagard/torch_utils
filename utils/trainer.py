@@ -58,7 +58,8 @@ class Trainer:
         epoch_losses = np.zeros(len(self.loss_names), dtype=np.float32)
         self.model.train(train)
         data_loader = self.train_dataloader if train else self.val_dataloader
-        step_time, fetch_time = None, None
+        step_time: float | None = None
+        fetch_time: float | None = None
         step_start_time = time.perf_counter()  # Needs to be outside the loop to include dataloading
         for step, (inputs, labels) in enumerate(data_loader, start=1):
             data_loading_finished_time = time.perf_counter()
@@ -84,7 +85,7 @@ class Trainer:
             epoch_losses += [loss.item() for loss in losses] if isinstance(losses, tuple) else [losses.item()]
 
             previous_step_start_time = step_start_time
-            if step_time:
+            if step_time and fetch_time:
                 step_time = 0.9*step_time + 0.1*1000*(time.perf_counter() - step_start_time)
                 fetch_time = 0.9*fetch_time + 0.1*1000*(data_loading_finished_time - previous_step_start_time)
             else:
@@ -108,7 +109,12 @@ class Trainer:
         return epoch_loss
 
     @staticmethod
-    def _print(step: int, max_steps: int, losses: tuple, loss_names: list[str], step_time: float, fetch_time: float):
+    def _print(step: int,
+               max_steps: int,
+               losses: tuple[torch.Tensor, ...],
+               loss_names: list[str],
+               step_time: float,
+               fetch_time: float):
         """Prints information related to the current step.
 
         Args:

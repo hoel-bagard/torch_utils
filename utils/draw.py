@@ -2,6 +2,7 @@ from typing import Optional
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 import torch
 from einops import rearrange
 
@@ -10,7 +11,7 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
                   predictions_tensor: torch.Tensor,
                   labels_tensor: torch.Tensor,
                   label_map: dict[int, str],
-                  size: Optional[tuple[int, int]] = None) -> np.ndarray:
+                  size: Optional[tuple[int, int]] = None) -> npt.NDArray[np.uint8]:
     """Draws predictions and labels on the image to help with TensorBoard visualisation.
 
     Args:
@@ -23,9 +24,9 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
     Returns:
         np.ndarray: images with information written on them
     """
-    imgs: np.ndarray = imgs_tensor.cpu().detach().numpy()
-    labels: np.ndarray = labels_tensor.cpu().detach().numpy()
-    predictions: np.ndarray = predictions_tensor.cpu().detach().numpy()
+    imgs: npt.NDArray[np.uint8] = imgs_tensor.cpu().detach().numpy()
+    labels: npt.NDArray[np.int64] = labels_tensor.cpu().detach().numpy()
+    predictions: npt.NDArray[np.int64] = predictions_tensor.cpu().detach().numpy()
 
     imgs = rearrange(imgs, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
 
@@ -58,7 +59,7 @@ def draw_pred_video(video_tensor: torch.Tensor,
                     prediction_tensor: torch.Tensor,
                     label_map: dict[int, str],
                     n_to_n: bool = False,
-                    size: Optional[tuple[int, int]] = None) -> np.ndarray:
+                    size: Optional[tuple[int, int]] = None) -> npt.NDArray[np.uint8]:
     """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:
@@ -72,9 +73,10 @@ def draw_pred_video(video_tensor: torch.Tensor,
     Returns:
         np.ndarray: Videos with information written on them
     """
-    video: np.ndarray = video_tensor.cpu().detach().numpy()
-    labels: np.ndarray = label_tensor.cpu().detach().numpy()
-    preds: np.ndarray = prediction_tensor.cpu().detach().numpy()
+    video: npt.NDArray[np.uint8] = video_tensor.cpu().detach().numpy()
+    labels: npt.NDArray[np.int64] = label_tensor.cpu().detach().numpy()
+    preds: npt.NDArray[np.int64] = prediction_tensor.cpu().detach().numpy()
+
     if not n_to_n:
         labels = np.broadcast_to(labels, video.shape[0])
         preds = np.broadcast_to(preds, (video.shape[0], preds.shape[0]))
@@ -101,7 +103,7 @@ def draw_pred_video(video_tensor: torch.Tensor,
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         new_video_list.append(img.get())
 
-    new_video = np.asarray(new_video_list)
+    new_video = np.asarray(new_video_list, dtype=np.uint8)
 
     # Keep a channel dimension if in gray scale mode
     if new_video.ndim == 3:

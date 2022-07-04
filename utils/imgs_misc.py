@@ -7,7 +7,7 @@ import torch
 from einops import rearrange
 
 
-def show_img(img: np.ndarray, window_name: str = "Image"):
+def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image") -> None:
     """Displays an image until the user presses the "q" key.
 
     Args:
@@ -40,10 +40,10 @@ def denormalize_np(img: npt.NDArray[np.uint8],
     Returns:
         The denormalized image.
     """
-    std = np.asarray(std)
-    mean = np.asarray(mean)
-    img = img * (255*std) + 255*mean
-    return img.astype(np.uint8)
+    std_array = np.asarray(std)
+    mean_array = np.asarray(mean)
+    img = (img * (255*std_array) + 255*mean_array).astype(np.uint8)
+    return img
 
 
 def denormalize_tensor(imgs: torch.Tensor,

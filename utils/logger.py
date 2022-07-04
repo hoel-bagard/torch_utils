@@ -24,7 +24,7 @@ class ConsoleColor:
 
 class ColoredFormatter(logging.Formatter):
     """Formatter adding colors to levelname."""
-    def format(self, record):
+    def format(self, record: logging.LogRecord):
         levelno = record.levelno
         if logging.ERROR == levelno:
             levelname_color = ConsoleColor.RED + record.levelname + ConsoleColor.ENDCOLOR
@@ -70,7 +70,7 @@ def create_logger(name: str,
     if stdout:
         # Add an handler to the logging system (default has none) : outputing in stdout
         terminal_log_handler = StreamHandler(sys.stdout)
-        if os.name != 'nt':
+        if os.name != "nt":
             # Fancy color for non windows console
             colored_log_formatter = ColoredFormatter("%(levelname)s - %(message)s")
             terminal_log_handler.setFormatter(colored_log_formatter)

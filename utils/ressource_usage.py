@@ -8,7 +8,7 @@ import subprocess
 from subprocess import CalledProcessError
 
 
-def resource_usage() -> tuple[int, str | None]:
+def resource_usage() -> tuple[int | None, str | None]:
     """Returns the ressources used by the process.
 
     Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
@@ -21,6 +21,7 @@ def resource_usage() -> tuple[int, str | None]:
     try:
         memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     except NameError:
+        memory_peak = None
         pass
     try:
         gpu_memory = subprocess.check_output(
