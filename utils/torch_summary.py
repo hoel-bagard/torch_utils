@@ -13,7 +13,7 @@ def summary(model: nn.Module,
             line_length: int = 64,
             batch_size: int = -1,
             device: Optional[torch.device] = None,
-            dtypes: torch.tensortype = None) -> list[str]:
+            dtypes: type = None) -> list[str]:
     """Make a summary of the given model.
 
     # TODO: Get the layers' names (they appear when simply printing a model)
@@ -35,25 +35,25 @@ def summary(model: nn.Module,
     def register_hook(module: nn.Module):
         def hook(module: nn.Module, inputs: torch.Tensor, output):
             class_name = str(module.__class__).rsplit(".", maxsplit=1)[-1].split("'")[0]
-            module_idx = len(summary)
+            module_idx = len(summary_dict)
 
             m_key = f"{class_name}-{module_idx+1}"
-            summary[m_key] = OrderedDict()
-            summary[m_key]["input_shape"] = list(inputs[0].size())
-            summary[m_key]["input_shape"][0] = batch_size
+            summary_dict[m_key] = OrderedDict()
+            summary_dict[m_key]["input_shape"] = list(inputs[0].size())
+            summary_dict[m_key]["input_shape"][0] = batch_size
             if isinstance(output, (list, tuple)):
-                summary[m_key]["output_shape"] = [[-1] + list(o.size())[1:] for o in output]
+                summary_dict[m_key]["output_shape"] = [[-1] + list(o.size())[1:] for o in output]
             else:
-                summary[m_key]["output_shape"] = list(output.size())
-                summary[m_key]["output_shape"][0] = batch_size
+                summary_dict[m_key]["output_shape"] = list(output.size())
+                summary_dict[m_key]["output_shape"][0] = batch_size
 
             params = 0
             if hasattr(module, "weight") and hasattr(module.weight, "size"):
                 params += torch.prod(torch.LongTensor(list(module.weight.size())))
-                summary[m_key]["trainable"] = module.weight.requires_grad
+                summary_dict[m_key]["trainable"] = module.weight.requires_grad
             if hasattr(module, "bias") and hasattr(module.bias, "size"):
                 params += torch.prod(torch.LongTensor(list(module.bias.size())))
-            summary[m_key]["nb_params"] = params
+            summary_dict[m_key]["nb_params"] = params
 
         if (not isinstance(module, nn.Sequential)
                 and not isinstance(module, nn.ModuleList)):
