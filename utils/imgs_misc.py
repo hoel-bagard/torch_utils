@@ -19,7 +19,7 @@ def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: boo
         window_name: The name of the window in which the image will be displayed.
         is_bgr: Should be True if the image format is BGR, False otherwise.
     """
-    if "DISPLAY" not in os.environ:  # TODO: check if that works on Windows too.
+    if "DISPLAY" in os.environ:  # TODO: check if that works on Windows too.
         while True:
             # Make the image full screen if it's above a given size (assume the screen isn't too small^^)
             if any(img.shape[:2] > np.asarray([1080, 1440])):
