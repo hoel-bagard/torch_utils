@@ -86,6 +86,6 @@ def create_logger(name: str,
         case "error":
             logger.setLevel(logging.ERROR)
         case _:
-            ValueError(f"Unexpected logging level: {verbose_level}")
+            raise ValueError(f"Unexpected logging level: {verbose_level}")
 
     return logger
