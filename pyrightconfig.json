@@ -1,0 +1,51 @@
+{
+  "include": [
+    "src",
+    "utils",
+    "train.py",
+    "inference.py"
+  ],
+
+  "ignore": [
+    "src/torch_utils",
+    "src/stubs"
+  ]
+
+  "exclude": [
+    "checkpoints"
+  ]
+
+  "stubPath": "src/stubs",
+
+  "strictListInference": true,
+  "strictDictionaryInference": true,
+  "strictSetInference": true,
+
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": true,
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "warning",
+  "reportUntypedNamedTuple": "warning",
+  "reportMissingSuperCall": "warning",
+  "reportUnknownArgumentType": "warning",
+  "reportUnknownLambdaType": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportUnknownMemberType": false,
+  "reportMissingParameterType": "warning",
+  "reportMissingTypeArgument": "warning",
+  "reportCallInDefaultInitializer": false,
+  "reportUnnecessaryIsInstance": "warning",
+  "reportUnnecessaryCast": "warning",
+  "reportUnnecessaryComparison": "warning",
+  "reportImplicitStringConcatenation": false,
+  "reportUnusedCallResult": false,
+  "reportUnusedExpression": "warning",
+  "reportUnnecessaryTypeIgnoreComment": "warning",
+  "reportMatchNotExhaustive": "warning",
+
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Linux",
+}
