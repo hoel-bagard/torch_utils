@@ -44,7 +44,10 @@ def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: boo
 
             AutoImage(Image.fromarray(img)).draw()
         except ModuleNotFoundError:
-            print("Consider installing the term_image and Pillow packages to display images in the terminal.")
+            if "warning_printed" not in show_img.__dict__:
+                show_img.warning_printed = True
+                print("Consider installing the term_image and Pillow packages to display images in the terminal.")
+                print("You can do that using:\n\tpip install term_image Pillow")
 
 
 def denormalize_np(img: npt.NDArray[np.uint8],
