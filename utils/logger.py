@@ -75,6 +75,7 @@ def create_logger(name: str,
             colored_log_formatter = ColoredFormatter("%(levelname)s - %(message)s")
             terminal_log_handler.setFormatter(colored_log_formatter)
         else:
+            log_formatter = logging.Formatter("%(levelname)s - %(message)s")
             terminal_log_handler.setFormatter(log_formatter)
         logger.addHandler(terminal_log_handler)
 
