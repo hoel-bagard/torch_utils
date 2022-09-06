@@ -1,4 +1,3 @@
-from abc import ABC
 from logging import Logger
 from pathlib import Path
 from typing import Optional
@@ -16,7 +15,7 @@ from .misc import clean_print
 AcceptedConfigTypes = int | float | str | bool | torch.Tensor
 
 
-class TensorBoard(ABC):
+class TensorBoard:
     def __init__(self,
                  model: nn.Module,
                  tb_dir: Path,
