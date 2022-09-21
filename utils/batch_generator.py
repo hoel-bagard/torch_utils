@@ -4,26 +4,25 @@ import signal
 from multiprocessing import shared_memory
 from pathlib import Path
 from time import time
-from typing import (
-    Callable,
-    Final,
-    Optional
-)
+from typing import Callable, Final, Optional, Type
+from types import TracebackType
 
 import numpy as np
-from torch import Tensor
+import numpy.typing as npt
 
 
 class BatchGenerator:
     def __init__(self,
-                 data: np.ndarray,
-                 labels: np.ndarray,
+                 data: npt.NDArray[np.generic],
+                 labels: npt.NDArray[np.generic],
                  batch_size: int,
                  nb_workers: int = 1,
-                 data_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
-                 labels_preprocessing_fn: Optional[Callable[[Path], np.ndarray]] = None,
-                 cpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]] = None,
-                 gpu_pipeline: Optional[Callable[[np.ndarray, np.ndarray], tuple[Tensor, Tensor]]] = None,
+                 data_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[np.generic]]] = None,
+                 labels_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[np.generic]]] = None,
+                 cpu_pipeline: Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
+                                                 tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
+                 gpu_pipeline:  Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
+                                                  tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
                  shuffle: bool = False,
                  seed: int = 0,
                  verbose_lvl: int = 0):
@@ -47,8 +46,8 @@ class BatchGenerator:
         # Handles ctrl+c to have a clean exit.
         # self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
 
-        self.data: Final[np.ndarray] = data
-        self.labels: Final[np.ndarray] = labels
+        self.data: Final[npt.NDArray[np.generic]] = data
+        self.labels: Final[npt.NDArray[np.generic]] = labels
         self.batch_size: Final[int] = batch_size
         self.nb_workers: Final[int] = nb_workers
         self.data_preprocessing_fn = data_preprocessing_fn
@@ -80,14 +79,16 @@ class BatchGenerator:
                                  for entry in data[:batch_size]])
         labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                    for entry in labels[:batch_size]])
+        gpu_data_batch: Optional[npt.NDArray[np.generic]] = None
+        gpu_labels_batch: Optional[npt.NDArray[np.generic]] = None
         if self.cpu_pipeline:
             data_batch, labels_batch = self.cpu_pipeline(data_batch, labels_batch)
         if self.gpu_pipeline:
             gpu_data_batch, gpu_labels_batch = self.gpu_pipeline(data_batch, labels_batch)
 
         # The shapes are not used in the BatchGenerator, but they can be accessed by other functions
-        self.data_shape = gpu_data_batch.shape[1:] if self.gpu_pipeline else data_batch.shape[1:]
-        self.label_shape = gpu_labels_batch.shape[1:] if self.gpu_pipeline else labels_batch.shape[1:]
+        self.data_shape = gpu_data_batch.shape[1:] if gpu_data_batch is not None else data_batch.shape[1:]
+        self.label_shape = gpu_labels_batch.shape[1:] if gpu_labels_batch is not None else labels_batch.shape[1:]
 
         self.steps_per_epoch = (self.nb_datapoints + (batch_size-1)) // self.batch_size
         self.last_batch_size = self.nb_datapoints % self.batch_size
@@ -104,21 +105,19 @@ class BatchGenerator:
         self._current_cache = 0
         # Indices
         self._cache_memory_indices = shared_memory.SharedMemory(create=True, size=index_list.nbytes)
-        self._cache_indices: np.ndarray = np.ndarray(self.nb_datapoints,
-                                                     dtype=int, buffer=self._cache_memory_indices.buf)
+        self._cache_indices = np.ndarray(self.nb_datapoints, dtype=int, buffer=self._cache_memory_indices.buf)
         self._cache_indices[:] = index_list
         # Data
         self._cache_memory_data = [
             shared_memory.SharedMemory(create=True, size=data_batch.nbytes),
             shared_memory.SharedMemory(create=True, size=data_batch.nbytes)]
-        self._cache_data: list[np.ndarray] = [
-            np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[0].buf),
-            np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[1].buf)]
+        self._cache_data = [np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[0].buf),
+                            np.ndarray(data_batch.shape, dtype=data_batch.dtype, buffer=self._cache_memory_data[1].buf)]
         # Labels
         self._cache_memory_labels = [
             shared_memory.SharedMemory(create=True, size=labels_batch.nbytes),
             shared_memory.SharedMemory(create=True, size=labels_batch.nbytes)]
-        self._cache_labels: list[np.ndarray] = [
+        self._cache_labels = [
             np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[0].buf),
             np.ndarray(labels_batch.shape, dtype=labels_batch.dtype, buffer=self._cache_memory_labels[1].buf)]
 
@@ -132,7 +131,7 @@ class BatchGenerator:
         """Create workers and pipes / events used to communicate with them."""
         self.stop_event = mp.Event()
         self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
-        self.worker_processes = []
+        self.worker_processes: list[mp.Process] = []
         for worker_index in range(self.nb_workers):
             self.worker_processes.append(mp.Process(target=self._worker_fn, args=(worker_index,)))
             self.worker_processes[-1].start()
@@ -163,7 +162,8 @@ class BatchGenerator:
                 if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, Starting to prepare mini-batch of {nb_elts} elements")
 
-                indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
+                indices_to_process: npt.NDArray[np.int64] = self._cache_indices[indices_start_index:
+                                                                                indices_start_index+nb_elts]
 
                 # Get the data (and process it)
                 if self.data_preprocessing_fn:
@@ -226,7 +226,7 @@ class BatchGenerator:
                 # Send empty instructions to excess workers
                 self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
 
-    def next_batch(self):
+    def next_batch(self) -> tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]:
         """Return the next bach of data.
 
         Returns a batch of data, goes to the next epoch when the previous one is finished.
@@ -245,8 +245,8 @@ class BatchGenerator:
 
         self.current_batch_size = self.batch_size if self.step != self.steps_per_epoch else self.last_batch_size
         self._current_cache = (self._current_cache+1) % 2
-        data_batch = self._cache_data[self._current_cache][:self.current_batch_size]
-        labels_batch = self._cache_labels[self._current_cache][:self.current_batch_size]
+        data_batch: npt.NDArray[np.generic] = self._cache_data[self._current_cache][:self.current_batch_size]
+        labels_batch: npt.NDArray[np.generic] = self._cache_labels[self._current_cache][:self.current_batch_size]
 
         # Start prefetching the next batch
         self._prefetch_batch()
@@ -266,12 +266,14 @@ class BatchGenerator:
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
     @staticmethod
-    def init_signal_handling(exception_class: type, signal_num: int, handler: Callable):
-        handler = functools.partial(handler, exception_class)
-        signal.signal(signal_num, handler)
+    def init_signal_handling(exception_class: Type[Exception],
+                             signal_num: int,
+                             handler: Callable[[Type[Exception], int, object], None]):
+        handler_except = functools.partial(handler, exception_class)
+        signal.signal(signal_num, handler_except)
         signal.siginterrupt(signal_num, False)
 
-    def signal_handler(self, exception_class: type, _signal_num: int, _current_stack_frame):
+    def signal_handler(self, exception_class: Type[Exception], _signal_num: int, _current_stack_frame: object):
         self.release()
         if self.stop_event.is_set():
             raise exception_class()
@@ -293,7 +295,10 @@ class BatchGenerator:
     def __del__(self):
         self.release()
 
-    def __exit__(self, _exc_type, _exc_value, _traceback):
+    def __exit__(self,
+                 _exc_type: Optional[Type[BaseException]],
+                 _exc_value: Optional[BaseException],
+                 _traceback: Optional[TracebackType]) -> None:
         self.release()
 
     def __enter__(self):
@@ -354,7 +359,7 @@ if __name__ == "__main__":
 
         # Put all the variables into a list, then use itertools to get all the possible combinations
         args_lists = [workers, batch_sizes, data_preprocessing_fns, labels_preprocessing_fns]
-        for args in product(*args_lists):  # type: ignore
+        for args in product(*args_lists):
             nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
 
             if verbose_lvl:
@@ -373,8 +378,8 @@ if __name__ == "__main__":
                                 nb_workers=nb_workers, shuffle=True, verbose_lvl=verbose_lvl) as batch_generator:
                 for _epoch in range(5):
                     # Variables used to aggregate dataset
-                    agg_data = []
-                    agg_labels = []
+                    agg_data: list[int] = []
+                    agg_labels: list[int] = []
 
                     for step, (data_batch, labels_batch) in enumerate(batch_generator, start=1):
                         global_step += 1
