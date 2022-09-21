@@ -359,8 +359,8 @@ if __name__ == "__main__":
 
         # Put all the variables into a list, then use itertools to get all the possible combinations
         args_lists = [workers, batch_sizes, data_preprocessing_fns, labels_preprocessing_fns]
-        for args in product(*args_lists):
-            nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = args
+        for test_args in product(*args_lists):
+            nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = test_args
 
             if verbose_lvl:
                 print(f"\n\nStarting test with {nb_workers=}, {batch_size=}")
