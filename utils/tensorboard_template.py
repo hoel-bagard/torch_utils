@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter  # type: ignore
 
 from .batch_generator import BatchGenerator
 from .metrics import Metrics
