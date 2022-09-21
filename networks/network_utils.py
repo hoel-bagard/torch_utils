@@ -5,8 +5,11 @@ import torch
 import torch.nn as nn
 
 
-def layer_init(layer: nn.Module, weight_gain: float = 1, bias_const: float = 0,
-               weights_init: str = "xavier", bias_init: str = "zeros"):
+def layer_init(layer: nn.Module,
+               weight_gain: int = 1,
+               bias_const: float = 0,
+               weights_init: str = "xavier",
+               bias_init: str = "zeros") -> None:
     """Layer initialisation function.
 
     Most of it comes from https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/sac_continuous_action.py.
@@ -38,17 +41,19 @@ def get_cnn_output_size(image_sizes: tuple[int, int],
                         strides: list[int],
                         paddings: list[int],
                         output_channels: Optional[int] = None,
-                        dense: bool = True,
-                        **kwargs) -> int | tuple[int, int]:
+                        dense: bool = True) -> int | tuple[int, int]:
     """Computes the output size of a cnn  (flattened).
 
     Args:
-        image_sizes (tuple): Dimensions of the input image (width, height).
-        sizes (list): List with the kernel size for each convolution
-        strides (list): List with the stride for each convolution
-        paddings (list): List with the padding for each convolution
-        output_channels (int, optional): Number of output channels of the last convolution, required if dense=True
-        dense (bool): If True, then this function returns an int (number of values) otherwise it returns [width, height]
+        image_sizes: Dimensions of the input image (width, height).
+        sizes: List with the kernel size for each convolution
+        strides: List with the stride for each convolution
+        paddings: List with the padding for each convolution
+        output_channels: Number of output channels of the last convolution, required if dense=True
+        dense: If True, then this function returns an int (number of values) otherwise it returns [width, height]
+
+    Returns:
+        The output size of the cnn, either as an int or a (width, height) tuple.
     """
     width, height = image_sizes
     for kernel_size, stride, padding in zip(sizes, strides, paddings):
