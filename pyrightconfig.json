@@ -6,13 +6,15 @@
 
   "exclude": [
     "env",
-    "venv"
+    "venv",
+    "typings"
   ]
 
   "strictListInference": true,
   "strictDictionaryInference": true,
   "strictSetInference": true,
 
+  "reportMissingModuleSource": false,
   "reportMissingImports": true,
   "reportMissingTypeStubs": false,
   "reportUnusedImport": true,

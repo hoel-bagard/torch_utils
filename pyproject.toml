@@ -3,6 +3,7 @@
 addopts = [
     "--import-mode=importlib",
 ]
+
 [tool.isort]
 line_length = 120
 case_sensitive = false
