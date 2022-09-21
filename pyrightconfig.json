@@ -1,21 +1,7 @@
 {
   "include": [
-    "src",
-    "utils",
-    "train.py",
-    "inference.py"
+    "src"
   ],
-
-  "ignore": [
-    "src/torch_utils",
-    "src/stubs"
-  ]
-
-  "exclude": [
-    "checkpoints"
-  ]
-
-  "stubPath": "src/stubs",
 
   "strictListInference": true,
   "strictDictionaryInference": true,
@@ -29,7 +15,7 @@
   "reportUnusedVariable": "warning",
   "reportDuplicateImport": "warning",
   "reportUntypedNamedTuple": "warning",
-  "reportMissingSuperCall": "warning",
+  "reportMissingSuperCall": false,
   "reportUnknownArgumentType": "warning",
   "reportUnknownLambdaType": "warning",
   "reportUnknownVariableType": "warning",
