@@ -63,7 +63,7 @@ def summary(model: nn.Module,
             trainable = False
             if hasattr(module, "weight") and hasattr(module.weight, "size"):
                 params += torch.prod(torch.LongTensor(list(module.weight.size())))  # type: ignore
-                trainable = module.weight.requires_grad
+                trainable = bool(module.weight.requires_grad)  # Bool should do nothing, pytorch typing seems wrong.
             if hasattr(module, "bias") and hasattr(module.bias, "size"):
                 params += torch.prod(torch.LongTensor(list(module.bias.size())))  # type: ignore
 
