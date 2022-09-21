@@ -63,7 +63,7 @@ class Trainer:
 
             outputs = self.model(inputs)
             losses: torch.Tensor | tuple[torch.Tensor, ...] = self.loss_fn(outputs, labels)
-            total_loss: torch.Tensor = torch.as_tensor(losses).sum() if isinstance(losses, tuple) else losses
+            total_loss: torch.Tensor = sum(losses) if isinstance(losses, tuple) else losses  # type: ignore
             if train:
                 total_loss.backward()
                 self.optimizer.step()

@@ -60,14 +60,16 @@ def summary(model: nn.Module,
                 output_shape = [batch_size, *list(output.size())[1:]]
 
             params: int = 0
+            trainable = False
             if hasattr(module, "weight") and hasattr(module.weight, "size"):
                 params += torch.prod(torch.LongTensor(list(module.weight.size())))  # type: ignore
+                trainable = module.weight.requires_grad
             if hasattr(module, "bias") and hasattr(module.bias, "size"):
                 params += torch.prod(torch.LongTensor(list(module.bias.size())))  # type: ignore
 
             summary_dict[m_key] = SummaryEntry(input_shape=input_shape_module,
                                                output_shape=output_shape,
-                                               trainable=bool(module.weight.requires_grad),
+                                               trainable=trainable,
                                                nb_params=params)
 
         if (not isinstance(module, nn.Sequential)
@@ -79,7 +81,7 @@ def summary(model: nn.Module,
         input_shape = [input_shape]
 
     # Batch_size of 2 for batchnorm
-    x = [torch.rand(2, *in_size, dtype=dtype).to(device=device)  # type: ignore
+    x = [torch.rand(2, *in_size).type(dtype).to(device=device)  # type: ignore
          for in_size, dtype in zip(input_shape, dtypes)]  # type: ignore
 
     # Create properties
