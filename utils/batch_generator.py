@@ -4,8 +4,8 @@ import signal
 from multiprocessing import shared_memory
 from pathlib import Path
 from time import time
-from typing import Callable, Final, Optional, Type
 from types import TracebackType
+from typing import Callable, Final, Optional, Type
 
 import numpy as np
 import numpy.typing as npt
@@ -21,8 +21,8 @@ class BatchGenerator:
                  labels_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[np.generic]]] = None,
                  cpu_pipeline: Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
                                                  tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
-                 gpu_pipeline:  Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
-                                                  tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
+                 gpu_pipeline: Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
+                                                 tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
                  shuffle: bool = False,
                  seed: int = 0,
                  verbose_lvl: int = 0):

@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from einops import rearrange
+from einops import rearrange  # type: ignore
 
 
 def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: bool = True) -> None:
@@ -27,7 +27,7 @@ def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: boo
                 cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
             if not is_bgr and img.shape[2] == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # type: ignore
 
             cv2.imshow(window_name, img)
             key = cv2.waitKey(10)
@@ -37,10 +37,10 @@ def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: boo
     else:
         try:
             from PIL import Image
-            from term_image.image import AutoImage
+            from term_image.image import AutoImage  # type: ignore
 
             if is_bgr:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # type: ignore
 
             AutoImage(Image.fromarray(img)).draw()
         except ModuleNotFoundError:

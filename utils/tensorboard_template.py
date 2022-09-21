@@ -11,7 +11,6 @@ from .batch_generator import BatchGenerator
 from .metrics import Metrics
 from .misc import clean_print
 
-
 AcceptedConfigTypes = int | float | str | bool | torch.Tensor
 
 
@@ -153,6 +152,7 @@ class TensorBoard:
 if __name__ == "__main__":
     def _main():
         import argparse
+
         from .logger import create_logger
         parser = argparse.ArgumentParser(description=("Script to test the Tensorboard template. "
                                                       "Run with 'python -m utils.tensorboard_template'."),

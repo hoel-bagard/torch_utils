@@ -1,7 +1,13 @@
 {
   "include": [
-    "src"
+    "utils",
+    "networks"
   ],
+
+  "exclude": [
+    "env",
+    "venv"
+  ]
 
   "strictListInference": true,
   "strictDictionaryInference": true,

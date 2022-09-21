@@ -1,14 +1,8 @@
-from typing import (
-    Callable,
-    Union
-)
+from typing import Callable, Union
 
 import torch.nn as nn
 
-from .layers import (
-    Conv2D,
-    DarknetBlock
-)
+from .layers import Conv2D, DarknetBlock
 from .network_utils import layer_init
 
 
