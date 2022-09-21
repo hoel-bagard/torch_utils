@@ -10,7 +10,7 @@ import torch.nn as nn
 
 class SummaryEntry(TypedDict):
     input_shape: list[int]
-    output_shape: list[list[int]]
+    output_shape: list[list[int]] | list[int]
     trainable: bool
     nb_params: int
 
@@ -34,7 +34,7 @@ def summary(model: nn.Module,
         dtypes: Type of each input, should have the same shape as input_shape
 
     Returns:
-        (list): A list where each entry is a line of the summary.
+        A list where each entry is a line of the summary.
     """
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -59,15 +59,15 @@ def summary(model: nn.Module,
             else:
                 output_shape = [batch_size, *list(output.size())[1:]]
 
-            params = 0
+            params: int = 0
             if hasattr(module, "weight") and hasattr(module.weight, "size"):
-                params += torch.prod(torch.LongTensor(list(module.weight.size())))
+                params += torch.prod(torch.LongTensor(list(module.weight.size())))  # type: ignore
             if hasattr(module, "bias") and hasattr(module.bias, "size"):
-                params += torch.prod(torch.LongTensor(list(module.bias.size())))
+                params += torch.prod(torch.LongTensor(list(module.bias.size())))  # type: ignore
 
             summary_dict[m_key] = SummaryEntry(input_shape=input_shape_module,
                                                output_shape=output_shape,
-                                               trainable=module.weight.requires_grad,
+                                               trainable=bool(module.weight.requires_grad),
                                                nb_params=params)
 
         if (not isinstance(module, nn.Sequential)
@@ -79,11 +79,12 @@ def summary(model: nn.Module,
         input_shape = [input_shape]
 
     # Batch_size of 2 for batchnorm
-    x = [torch.rand(2, *in_size).type(dtype).to(device=device) for in_size, dtype in zip(input_shape, dtypes)]
+    x = [torch.rand(2, *in_size, dtype=dtype).to(device=device)  # type: ignore
+         for in_size, dtype in zip(input_shape, dtypes)]  # type: ignore
 
     # Create properties
     summary_dict: OrderedDict[str, SummaryEntry] = OrderedDict()
-    hooks: list[torch.utils.hooks.RemovableHandle] = []
+    hooks: list[torch.utils.hooks.RemovableHandle] = []  # type: ignore
 
     # Register hook
     model.apply(register_hook)
@@ -92,7 +93,7 @@ def summary(model: nn.Module,
     model(*x)
 
     # Remove these hooks
-    for h in hooks:
+    for h in hooks:  # type: ignore
         h.remove()
 
     summary_lines: list[str] = []
@@ -101,7 +102,7 @@ def summary(model: nn.Module,
     summary_lines.append(f"{'Layer (type)':>20}  {'Output Shape':>25} {'Param #':>15}")
     summary_lines.append(line_length*'=')
     total_params = 0
-    total_output = 0
+    total_output: int = 0
     trainable_params = 0
     for layer in summary_dict:
         # input_shape, output_shape, trainable, nb_params
@@ -109,7 +110,7 @@ def summary(model: nn.Module,
                              f"{summary_dict[layer]['nb_params']:>15,}")
         total_params += summary_dict[layer]["nb_params"]
 
-        total_output += np.prod(summary_dict[layer]["output_shape"])
+        total_output += np.prod(summary_dict[layer]["output_shape"])  # type: ignore
         if "trainable" in summary_dict[layer]:
             if summary_dict[layer]["trainable"]:
                 trainable_params += summary_dict[layer]["nb_params"]
