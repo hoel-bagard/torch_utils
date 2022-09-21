@@ -31,10 +31,10 @@ repos:
           - flake8-import-order
           # - flake8-pyprojecttoml @ git+https://github.com/tlambert03/flake8-pyprojecttoml.git@main
 
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.271
-    hooks:
-    - id: pyright
+  # - repo: https://github.com/RobertCraigie/pyright-python
+  #   rev: v1.1.271
+  #   hooks:
+  #   - id: pyright
 
   # - repo: https://github.com/PyCQA/isort
   #   rev: 5.10.1
