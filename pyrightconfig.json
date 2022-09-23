@@ -23,6 +23,8 @@
   "reportUnusedVariable": "warning",
   "reportDuplicateImport": "warning",
   "reportUntypedNamedTuple": "warning",
+  "reportUntypedFunctionDecorator: "warning",
+  "reportUntypedClassDecorator: "warning",
   "reportMissingSuperCall": false,
   "reportUnknownArgumentType": "warning",
   "reportUnknownLambdaType": "warning",
