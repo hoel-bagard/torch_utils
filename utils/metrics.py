@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
+import numpy as np
+import numpy.typing as npt
 import torch
 
 from .batch_generator import BatchGenerator
@@ -29,7 +31,10 @@ class Metrics(ABC):
         self.max_batches = max_batches
 
     @abstractmethod
-    def get_metrics(self, mode: str = "Train", **kwargs) -> dict[str, dict[str, Any]]:
+    def get_metrics(self,
+                    mode: str = "Train",
+                    **kwargs: dict[str, object]
+                    ) -> dict[str, dict[str, dict[str, float] | dict[str, npt.NDArray[np.uint8]]]]:
         """Method returning all the metrics the class can provide.
 
         This Method calls the class's other method to aggregate all the metrics into a dictionnary.

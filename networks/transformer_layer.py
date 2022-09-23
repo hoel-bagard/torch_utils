@@ -5,8 +5,9 @@ import torch.nn as nn
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self, input_size,
-                 output_size,
+    def __init__(self,
+                 input_size: int,
+                 output_size: int,
                  nhead: int = 4,
                  dim_feedforward: int = 1024,
                  nlayers: int = 3,
@@ -34,7 +35,7 @@ class TransformerLayer(nn.Module):
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src):
+    def forward(self, src: torch.Tensor) -> torch.Tensor:
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src)
         output = self.decoder(output)
@@ -42,7 +43,7 @@ class TransformerLayer(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=1000):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -54,6 +55,6 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
 
-    def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x + self.pe[:x.size(0), :]  # type: ignore
         return self.dropout(x)

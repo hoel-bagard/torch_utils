@@ -1,59 +1,76 @@
 """Taken from https://github.com/sksq96/pytorch-summary."""
 
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, TypedDict
 
 import numpy as np
 import torch
 import torch.nn as nn
 
 
+class SummaryEntry(TypedDict):
+    input_shape: list[int]
+    output_shape: list[list[int]] | list[int]
+    trainable: bool
+    nb_params: int
+
+
 def summary(model: nn.Module,
-            input_shape: tuple[int, ...] | list[tuple[int], ...],
+            input_shape: tuple[int, ...] | list[tuple[int, ...]],
             line_length: int = 64,
             batch_size: int = -1,
             device: Optional[torch.device] = None,
-            dtypes: type = None) -> list[str]:
+            dtypes: Optional[torch.TensorType | list[torch.TensorType]] = None) -> list[str]:
     """Make a summary of the given model.
 
     # TODO: Get the layers' names (they appear when simply printing a model)
 
     Args:
-        model (nn.Module): The model whose summary should be created.
-        input_shape (list): The input shape of the network.
-        line_length (int): Number of caracters per line.
+        model: The model whose summary should be created.
+        input_shape: The input shape of the network.
+        line_length: Number of caracters per line.
+        batch_size: ?
+        device: ?
+        dtypes: Type of each input, should have the same shape as input_shape
 
     Returns:
-        (list): A list where each entry is a line of the summary.
+        A list where each entry is a line of the summary.
     """
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     if dtypes is None:
-        dtypes = [torch.FloatTensor] * len(input_shape)
+        dtypes = [torch.FloatTensor] * len(input_shape)  # type: ignore
+    elif isinstance(input_shape, list) and (not isinstance(dtypes, list) or len(dtypes) != len(input_shape)):
+        raise ValueError(("The number of values given for the input shapes and the types do not match:"
+                          f" {input_shape=}, {dtypes=}"))
 
     def register_hook(module: nn.Module):
-        def hook(module: nn.Module, inputs: torch.Tensor, output):
+        def hook(module: nn.Module,
+                 inputs: torch.Tensor,
+                 output: list[torch.Tensor] | tuple[torch.Tensor, ...] | torch.Tensor):
             class_name = str(module.__class__).rsplit(".", maxsplit=1)[-1].split("'")[0]
             module_idx = len(summary_dict)
 
             m_key = f"{class_name}-{module_idx+1}"
-            summary_dict[m_key] = OrderedDict()
-            summary_dict[m_key]["input_shape"] = list(inputs[0].size())
-            summary_dict[m_key]["input_shape"][0] = batch_size
+            input_shape_module = [batch_size, *list(inputs[0].size())[1:]]
             if isinstance(output, (list, tuple)):
-                summary_dict[m_key]["output_shape"] = [[-1] + list(o.size())[1:] for o in output]
+                output_shape = [[-1] + list(o.size())[1:] for o in output]
             else:
-                summary_dict[m_key]["output_shape"] = list(output.size())
-                summary_dict[m_key]["output_shape"][0] = batch_size
+                output_shape = [batch_size, *list(output.size())[1:]]
 
-            params = 0
+            params: int = 0
+            trainable = False
             if hasattr(module, "weight") and hasattr(module.weight, "size"):
-                params += torch.prod(torch.LongTensor(list(module.weight.size())))
-                summary_dict[m_key]["trainable"] = module.weight.requires_grad
+                params += torch.prod(torch.LongTensor(list(module.weight.size())))  # type: ignore
+                trainable = bool(module.weight.requires_grad)  # Bool should do nothing, pytorch typing seems wrong.
             if hasattr(module, "bias") and hasattr(module.bias, "size"):
-                params += torch.prod(torch.LongTensor(list(module.bias.size())))
-            summary_dict[m_key]["nb_params"] = params
+                params += torch.prod(torch.LongTensor(list(module.bias.size())))  # type: ignore
+
+            summary_dict[m_key] = SummaryEntry(input_shape=input_shape_module,
+                                               output_shape=output_shape,
+                                               trainable=trainable,
+                                               nb_params=params)
 
         if (not isinstance(module, nn.Sequential)
                 and not isinstance(module, nn.ModuleList)):
@@ -64,11 +81,12 @@ def summary(model: nn.Module,
         input_shape = [input_shape]
 
     # Batch_size of 2 for batchnorm
-    x = [torch.rand(2, *in_size).type(dtype).to(device=device) for in_size, dtype in zip(input_shape, dtypes)]
+    x = [torch.rand(2, *in_size).type(dtype).to(device=device)  # type: ignore
+         for in_size, dtype in zip(input_shape, dtypes)]  # type: ignore
 
     # Create properties
-    summary_dict: OrderedDict[str, dict[str, int]] = OrderedDict()
-    hooks: list[torch.utils.hooks.RemovableHandle] = []
+    summary_dict: OrderedDict[str, SummaryEntry] = OrderedDict()
+    hooks: list[torch.utils.hooks.RemovableHandle] = []  # type: ignore
 
     # Register hook
     model.apply(register_hook)
@@ -77,7 +95,7 @@ def summary(model: nn.Module,
     model(*x)
 
     # Remove these hooks
-    for h in hooks:
+    for h in hooks:  # type: ignore
         h.remove()
 
     summary_lines: list[str] = []
@@ -86,7 +104,7 @@ def summary(model: nn.Module,
     summary_lines.append(f"{'Layer (type)':>20}  {'Output Shape':>25} {'Param #':>15}")
     summary_lines.append(line_length*'=')
     total_params = 0
-    total_output = 0
+    total_output: int = 0
     trainable_params = 0
     for layer in summary_dict:
         # input_shape, output_shape, trainable, nb_params
@@ -94,7 +112,7 @@ def summary(model: nn.Module,
                              f"{summary_dict[layer]['nb_params']:>15,}")
         total_params += summary_dict[layer]["nb_params"]
 
-        total_output += np.prod(summary_dict[layer]["output_shape"])
+        total_output += np.prod(summary_dict[layer]["output_shape"])  # type: ignore
         if "trainable" in summary_dict[layer]:
             if summary_dict[layer]["trainable"]:
                 trainable_params += summary_dict[layer]["nb_params"]

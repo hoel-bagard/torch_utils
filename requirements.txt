@@ -1,3 +1,6 @@
 torch
 numpy
 tensorboard
+einops
+Pillow
+opencv-python

@@ -15,23 +15,23 @@ def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end: str = '\n'
     print(msg + ' ' * (get_terminal_size(fallback=fallback).columns - len(msg)), end=end, flush=True)
 
 
-def get_config_as_dict(config: object) -> dict[str, Any]:
-    """Takes a config object and returns it as dictionnary.
+def get_config_as_dict(config: object) -> dict[str, object]:
+    """Take a config object (class with class attributes) and return it as dictionnary.
 
     Args:
-        config (type): A config is just a python class with some class variables.
+        config: A config is just a python class with some class variables.
 
     Returns:
         config_dict: A dictionnary mapping a (lowercase) class variable name to its value.
     """
     config_attribute_dict = vars(config)
 
-    config_dict = {}
+    config_dict: dict[str, object] = {}
     for key, value in config_attribute_dict.items():
         if not key.startswith('__') and key[0].isupper():
             config_dict[key.lower()] = value
 
-    return config_dict  # type: ignore
+    return config_dict
 
 
 def get_dataclass_as_dict(config: object, lower_case: bool = True) -> dict[str, Any]:
@@ -39,11 +39,12 @@ def get_dataclass_as_dict(config: object, lower_case: bool = True) -> dict[str, 
 
     Args:
         config: The dataclass instance.
-        lower_case (bool): If true then the field names will all be lowercase.
+        lower_case: If true then the field names will all be lowercase.
 
     Returns:
         A dictionnary where the keys are the field names and the values are the config values.
     """
     if lower_case:
-        return dict((field.name.lower(), getattr(config, field.name)) for field in fields(config))
+        return {field.name.lower(): getattr(config, field.name) for field in fields(config)}
+
     return asdict(config)

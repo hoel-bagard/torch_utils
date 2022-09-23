@@ -22,7 +22,6 @@ def resource_usage() -> tuple[int | None, str | None]:
         memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     except NameError:
         memory_peak = None
-        pass
     try:
         gpu_memory = subprocess.check_output(
             "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()

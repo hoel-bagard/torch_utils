@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from einops import rearrange
+from einops import rearrange  # type: ignore
 
 
 def draw_pred_img(imgs_tensor: torch.Tensor,
@@ -15,11 +15,11 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
     """Draws predictions and labels on the image to help with TensorBoard visualisation.
 
     Args:
-        imgs_tensor (torch.Tensor): Raw imgs.
-        predictions_tensor (torch.Tensor): Predictions of the network, after softmax but before taking argmax
-        labels_tensor (torch.Tensor): Labels corresponding to the images
-        label_map (dict): Dictionary linking class index to class name
-        size (tuple, optional): If given, the images will be resized to this size
+        imgs_tensor: Raw imgs.
+        predictions_tensor: Predictions of the network, after softmax but before taking argmax.
+        labels_tensor: Labels corresponding to the images.
+        label_map: Dictionary linking class index to class name.
+        size: If given, the images will be resized to this size.
 
     Returns:
         np.ndarray: images with information written on them
@@ -40,8 +40,8 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
         img = np.asarray(img * 255.0, dtype=np.uint8)
         if size:
             img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-        img = cv2.UMat(img)
-        img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
+        img = cv2.UMat(img)  # type: ignore
+        img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, value=0)  # type: ignore
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
@@ -97,8 +97,9 @@ def draw_pred_video(video_tensor: torch.Tensor,
         img = np.asarray(img * 255.0, dtype=np.uint8)
         if size:
             img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-        img = cv2.UMat(img)
-        img = cv2.putText(img, preds_text, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+        img = cv2.UMat(img)  # type: ignore
+        img = cv2.putText(img, preds_text, (20, 20),  # type: ignore
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         new_video_list.append(img.get())

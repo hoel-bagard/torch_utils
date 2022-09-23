@@ -1,26 +1,20 @@
 {
   "include": [
-    "src",
     "utils",
-    "train.py",
-    "inference.py"
+    "networks"
   ],
 
-  "ignore": [
-    "src/torch_utils",
-    "src/stubs"
-  ]
-
   "exclude": [
-    "checkpoints"
+    "env",
+    "venv",
+    "typings"
   ]
-
-  "stubPath": "src/stubs",
 
   "strictListInference": true,
   "strictDictionaryInference": true,
   "strictSetInference": true,
 
+  "reportMissingModuleSource": false,
   "reportMissingImports": true,
   "reportMissingTypeStubs": false,
   "reportUnusedImport": true,
@@ -29,7 +23,9 @@
   "reportUnusedVariable": "warning",
   "reportDuplicateImport": "warning",
   "reportUntypedNamedTuple": "warning",
-  "reportMissingSuperCall": "warning",
+  "reportUntypedFunctionDecorator: "warning",
+  "reportUntypedClassDecorator: "warning",
+  "reportMissingSuperCall": false,
   "reportUnknownArgumentType": "warning",
   "reportUnknownLambdaType": "warning",
   "reportUnknownVariableType": "warning",

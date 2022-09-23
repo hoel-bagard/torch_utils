@@ -1,9 +1,6 @@
 import shutil
 import time
-from typing import (
-    Callable,
-    Optional
-)
+from typing import Callable, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -20,20 +17,18 @@ class Trainer:
                  optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
-                 use_amp: bool = False,
                  loss_names: Optional[list[str]] = None,
                  on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
         """Initialize the trainer instance.
 
         Args:
-            model (torch.nn.Module): The PyTorch model to train
-            loss_fn (torch.nn.Module): Function used to compute the loss of the model
-            optimizer (torch.optim.Optimizer): Optimizer to use
-            train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data
-            val_dataloader (BatchGenerator): DataLoader containing  validation data
-            use_amp (bool): If True then use Mixed Precision Training.
+            model: The PyTorch model to train.
+            loss_fn: Function/module used to compute the loss of the model.
+            optimizer: The optimizer to use.
+            train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data.
+            val_dataloader: DataLoader containing  validation data.
             loss_names: List with the name for each loss component.
-            on_epoch_begin (callable): function that will be called at the beginning of every epoch.
+            on_epoch_begin: function that will be called at the beginning of every epoch.
         """
         self.model = model
         self.loss_fn = loss_fn
@@ -42,12 +37,8 @@ class Trainer:
         self.val_dataloader = val_dataloader
         self.batch_size = train_dataloader.batch_size
         self.loss_names = loss_names if loss_names is not None else ["Loss"]
-        self.use_amp = use_amp
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-        if use_amp:
-            self.scaler = torch.cuda.amp.GradScaler()
 
     def epoch_loop(self, train: bool = True) -> npt.NDArray[np.float32] | float:
         """Does a pass on every batch of the train or validation dataset.
@@ -70,21 +61,12 @@ class Trainer:
             if self.on_epoch_begin:
                 self.on_epoch_begin(self)
 
-            if self.use_amp:
-                with torch.cuda.amp.autocast():
-                    outputs = self.model(inputs)
-                    loss = self.loss_fn(outputs, labels)
-                if train:
-                    self.scaler.scale(loss).backward()
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
-            else:
-                outputs = self.model(inputs)
-                losses = self.loss_fn(outputs, labels)
-                total_loss: torch.Tensor = sum(losses) if isinstance(losses, tuple) else losses
-                if train:
-                    total_loss.backward()
-                    self.optimizer.step()
+            outputs = self.model(inputs)
+            losses: torch.Tensor | tuple[torch.Tensor, ...] = self.loss_fn(outputs, labels)
+            total_loss: torch.Tensor = sum(losses) if isinstance(losses, tuple) else losses  # type: ignore
+            if train:
+                total_loss.backward()
+                self.optimizer.step()
             epoch_losses += [loss.item() for loss in losses] if isinstance(losses, tuple) else [losses.item()]
 
             previous_step_start_time = step_start_time
