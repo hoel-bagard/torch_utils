@@ -100,9 +100,9 @@ def summary(model: nn.Module,
 
     summary_lines: list[str] = []
 
-    summary_lines.append(line_length*'-')
+    summary_lines.append(line_length*"-")
     summary_lines.append(f"{'Layer (type)':>20}  {'Output Shape':>25} {'Param #':>15}")
-    summary_lines.append(line_length*'=')
+    summary_lines.append(line_length*"=")
     total_params = 0
     total_output: int = 0
     trainable_params = 0
@@ -123,15 +123,15 @@ def summary(model: nn.Module,
     total_params_size = abs(total_params * 4 / (1024 ** 2))
     total_size = total_params_size + total_output_size + total_input_size
 
-    summary_lines.append(line_length*'=')
+    summary_lines.append(line_length*"=")
     summary_lines.append(f"Total params: {total_params:,}")
     summary_lines.append(f"Trainable params: {trainable_params:,}")
     summary_lines.append(f"Non-trainable params: {total_params - trainable_params:,}")
-    summary_lines.append(line_length*'-')
+    summary_lines.append(line_length*"-")
     summary_lines.append(f"Input size (MB): {total_input_size:.2f}")
     summary_lines.append(f"Forward/backward pass size (MB): {total_output_size:.2f}")
     summary_lines.append(f"Params size (MB): {total_params_size:.2f}")
     summary_lines.append(f"Estimated Total Size (MB): {total_size:.2f}")
-    summary_lines.append(line_length*'-')
+    summary_lines.append(line_length*"-")
 
     return summary_lines

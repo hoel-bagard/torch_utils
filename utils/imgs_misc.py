@@ -85,7 +85,7 @@ def denormalize_tensor(imgs: torch.Tensor,
     mean = mean if mean is not None else torch.tensor((0.485, 0.456, 0.406))
     std = std if std is not None else torch.tensor((0.229, 0.224, 0.225))
 
-    imgs = rearrange(imgs, 'b c w h -> b w h c')
+    imgs = rearrange(imgs, "b c w h -> b w h c")
     imgs = imgs * (255*std) + 255*mean
-    imgs = rearrange(imgs, 'b w h c -> b c w h')
+    imgs = rearrange(imgs, "b w h c -> b c w h")
     return imgs

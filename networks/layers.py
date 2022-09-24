@@ -100,7 +100,7 @@ class DarknetBlock(nn.Module):
 class Rearrange(nn.Module):
     def __init__(self, pattern: str):
         super().__init__()
-        if '(' in pattern or ')' in pattern:
+        if "(" in pattern or ")" in pattern:
             self.permute = False
             self.pattern = pattern
         else:

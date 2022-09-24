@@ -28,7 +28,7 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
     labels: npt.NDArray[np.int64] = labels_tensor.cpu().detach().numpy()
     predictions: npt.NDArray[np.int64] = predictions_tensor.cpu().detach().numpy()
 
-    imgs = rearrange(imgs, 'b c w h -> b w h c')  # imgs.transpose(0, 2, 3, 1)
+    imgs = rearrange(imgs, "b c w h -> b w h c")  # imgs.transpose(0, 2, 3, 1)
 
     out_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
@@ -81,7 +81,7 @@ def draw_pred_video(video_tensor: torch.Tensor,
         labels = np.broadcast_to(labels, video.shape[0])
         preds = np.broadcast_to(preds, (video.shape[0], preds.shape[0]))
 
-    video = rearrange(video, 'b c h w -> b h w c')
+    video = rearrange(video, "b c h w -> b h w c")
 
     new_video_list = []
     for img, pred, label in zip(video, preds, labels):

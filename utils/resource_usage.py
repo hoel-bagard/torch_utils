@@ -26,9 +26,9 @@ def resource_usage() -> tuple[int | None, str | None]:
         gpu_memory = subprocess.check_output(
             "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()
         if "CUDA_VISIBLE_DEVICES" in os.environ:
-            gpu_memory = gpu_memory.split('\n')[int(os.environ["CUDA_VISIBLE_DEVICES"])]
+            gpu_memory = gpu_memory.split("\n")[int(os.environ["CUDA_VISIBLE_DEVICES"])]
         else:
-            gpu_memory = ' '.join(gpu_memory.split('\n'))
+            gpu_memory = " ".join(gpu_memory.split("\n"))
     except CalledProcessError:
         gpu_memory = None
 

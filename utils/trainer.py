@@ -117,4 +117,4 @@ class Trainer:
         progress_bar_len = min(terminal_cols - len(pre_string) - len(post_string)-1, 30)
         epoch_progress = int(progress_bar_len * (step/max_steps))
         print(pre_string + f"{epoch_progress*'='}>{(progress_bar_len-epoch_progress)*'.'}" + post_string,
-              end=('\r' if step < max_steps else '\n'), flush=True)
+              end=("\r" if step < max_steps else "\n"), flush=True)

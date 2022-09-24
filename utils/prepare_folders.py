@@ -23,10 +23,10 @@ def yes_no_prompt(question: str, default: bool = True) -> bool:
     if len(answer) == 0:
         return default
 
-    if answer not in ['y', 'n']:
+    if answer not in ["y", "n"]:
         print("Input invalid, please enter 'y' or 'n'")
         return yes_no_prompt(question)
-    return answer == 'y'
+    return answer == "y"
 
 
 def prepare_folders(tb_dir: Optional[Path] = None,
@@ -47,7 +47,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
     # If path not None -> promt to remove if exist
     if tb_dir is not None:
         if tb_dir.exists():
-            delete = yes_no_prompt(f"TensorBoard folder \"{tb_dir}\" already exists, do you want to delete it ?")
+            delete = yes_no_prompt(f"TensorBoard folder '{tb_dir}' already exists, do you want to delete it ?")
             if delete:
                 while tb_dir.exists():
                     rmtree(tb_dir, ignore_errors=True)
@@ -59,7 +59,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
 
     if checkpoints_dir is not None:
         if checkpoints_dir.exists():
-            delete = yes_no_prompt(f"Checkpoints folder \"{checkpoints_dir}\" already exists,"
+            delete = yes_no_prompt(f"Checkpoints folder '{checkpoints_dir}' already exists,"
                                    " do you want to delete it ?")
             if delete:
                 while checkpoints_dir.exists():
