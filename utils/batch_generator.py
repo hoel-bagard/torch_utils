@@ -308,7 +308,7 @@ class BatchGenerator:
         return self.nb_datapoints
 
     def release(self):
-        """Terminate all workers and release all the shared ressources."""
+        """Terminate all workers and release all the shared resources."""
         # Terminate cleanly even if there was an error during the initialization
         if not hasattr(self, "_cache_memory_data"):
             return

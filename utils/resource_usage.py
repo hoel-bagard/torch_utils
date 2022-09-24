@@ -9,7 +9,7 @@ from subprocess import CalledProcessError
 
 
 def resource_usage() -> tuple[int | None, str | None]:
-    """Returns the ressources used by the process.
+    """Returns the resources used by the process.
 
     Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
     Returns peak RAM usage and VRAM usage at the time this function is called.
