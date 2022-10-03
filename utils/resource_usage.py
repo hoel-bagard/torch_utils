@@ -16,7 +16,7 @@ def resource_usage() -> tuple[int | None, str | None]:
     Note that this is different from peak VRAM usage (as this usually happens before the training loop).
 
     Returns:
-        tuple: Peak memory usage and peak GPU usage (if a GPU is present, otherwise None)
+        Peak memory usage and peak GPU usage (if a GPU is present, otherwise None)
     """
     try:
         memory_peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

@@ -22,7 +22,7 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
         size: If given, the images will be resized to this size.
 
     Returns:
-        np.ndarray: images with information written on them
+        Images with information written on them.
     """
     imgs: npt.NDArray[np.uint8] = imgs_tensor.cpu().detach().numpy()
     labels: npt.NDArray[np.int64] = labels_tensor.cpu().detach().numpy()
@@ -40,17 +40,17 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
         img = np.asarray(img * 255.0, dtype=np.uint8)
         if size:
             img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-        img = cv2.UMat(img)  # type: ignore
-        img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, value=0)  # type: ignore
+        # img = cv2.UMat(img)
+        img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
 
-        out_img = img.get()
+        # out_img = img.get()
         # If opencv resizes a grayscale image, it removes the channel dimension
-        if out_img.ndim == 2:
-            out_img = np.expand_dims(out_img, -1)
-        out_imgs.append(out_img)
+        if img.ndim == 2:
+            img = np.expand_dims(img, -1)
+        out_imgs.append(img)
     return np.asarray(out_imgs)
 
 
@@ -63,15 +63,15 @@ def draw_pred_video(video_tensor: torch.Tensor,
     """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:
-        video (torch.Tensor): Raw video.
-        label (torch.Tensor): Label corresponding to the video
-        prediction (torch.Tensor): Prediction of the network, after softmax but before taking argmax
-        label_map (dict): Dictionary linking class index to class name
-        n_to_n (bool): True if using one label for each element of the sequence
-        size (tuple, optional): If given, the images will be resized to this size
+        video: Raw video.
+        label: Label corresponding to the video
+        prediction: Prediction of the network, after softmax but before taking argmax
+        label_map: Dictionary linking class index to class name
+        n_to_n: True if using one label for each element of the sequence
+        size: If given, the images will be resized to this size
 
     Returns:
-        np.ndarray: Videos with information written on them
+        Videos with information written on them
     """
     video: npt.NDArray[np.uint8] = video_tensor.cpu().detach().numpy()
     labels: npt.NDArray[np.int64] = label_tensor.cpu().detach().numpy()
@@ -97,12 +97,13 @@ def draw_pred_video(video_tensor: torch.Tensor,
         img = np.asarray(img * 255.0, dtype=np.uint8)
         if size:
             img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-        img = cv2.UMat(img)  # type: ignore
-        img = cv2.putText(img, preds_text, (20, 20),  # type: ignore
+        # img = cv2.UMat(img)
+        img = cv2.putText(img, preds_text, (20, 20),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-        new_video_list.append(img.get())
+        # img = img.get()
+        new_video_list.append(img)
 
     new_video = np.asarray(new_video_list, dtype=np.uint8)
 

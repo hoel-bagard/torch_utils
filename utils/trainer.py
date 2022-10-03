@@ -40,16 +40,16 @@ class Trainer:
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def epoch_loop(self, train: bool = True) -> npt.NDArray[np.float32] | float:
+    def epoch_loop(self, train: bool = True) -> npt.NDArray[np.float64] | float:
         """Does a pass on every batch of the train or validation dataset.
 
         Args:
-            train (bool): Whether it is a train or validation loop.
+            train: Whether it is a train or validation loop.
 
         Returns:
             Either one float value, or an array of floats if the loss has multiple components.
         """
-        epoch_losses = np.zeros(len(self.loss_names), dtype=np.float32)
+        epoch_losses = np.zeros(len(self.loss_names), dtype=np.float64)
         self.model.train(train)
         data_loader = self.train_dataloader if train else self.val_dataloader
         step_time: float | None = None
@@ -83,11 +83,11 @@ class Trainer:
         epoch_losses = epoch_losses / data_loader.steps_per_epoch
         return epoch_losses if len(epoch_losses) > 1 else float(epoch_losses)  # For backward compatibility
 
-    def train_epoch(self) -> npt.NDArray[np.float32] | float:
+    def train_epoch(self) -> npt.NDArray[np.float64] | float:
         """Performs a training epoch."""
         return self.epoch_loop()
 
-    def val_epoch(self) -> npt.NDArray[np.float32] | float:
+    def val_epoch(self) -> npt.NDArray[np.float64] | float:
         """Performs a validation epoch."""
         with torch.no_grad():
             epoch_loss = self.epoch_loop(train=False)

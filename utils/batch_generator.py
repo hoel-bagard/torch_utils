@@ -9,39 +9,44 @@ from typing import Callable, Final, Optional, Type
 
 import numpy as np
 import numpy.typing as npt
+import torch
+
+
+T_np_img = np.float64 | np.uint8
+T_np_labels = np.float64 | np.int64
 
 
 class BatchGenerator:
     def __init__(self,
-                 data: npt.NDArray[np.generic],
-                 labels: npt.NDArray[np.generic],
+                 data: npt.NDArray[np.object_ | T_np_img],
+                 labels: npt.NDArray[T_np_labels],
                  batch_size: int,
                  nb_workers: int = 1,
-                 data_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[np.generic]]] = None,
-                 labels_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[np.generic]]] = None,
-                 cpu_pipeline: Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
-                                                 tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
-                 gpu_pipeline: Optional[Callable[[npt.NDArray[np.generic], npt.NDArray[np.generic]],
-                                                 tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]]] = None,
+                 data_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[T_np_img]]] = None,
+                 labels_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[T_np_labels]]] = None,
+                 cpu_pipeline: Optional[Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
+                                                 tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]]] = None,
+                 gpu_pipeline: Optional[Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
+                                                 tuple[torch.Tensor, torch.Tensor]]] = None,
                  shuffle: bool = False,
                  seed: int = 0,
                  verbose_lvl: int = 0):
         """Initialize the batch generator.
 
         Args:
-            data (np.ndarray): Numpy array with the data. It can be be only paths to the datapoints to load
-                                (or any other form of data) if the loading function is given as data_preprocessing_fn.
-            labels (np.ndarray): Numpy array with the labels, as for data the labels can be only partially processed
-            batch_size (int): The desired batch size.
-            nb_workers (int): Number of workers to use for multiprocessing (>=1).
-            data_preprocessing_fn (callable, optional): If not None, data will be passed through this function.
+            data: Numpy array with the data. It can be be paths to the datapoints to load
+                  (or any other form of data) if the loading function is given as data_preprocessing_fn.
+            labels: Numpy array with the labels, as for data the labels can be only partially processed
+            batch_size: The desired batch size.
+            nb_workers: Number of workers to use for multiprocessing (>=1).
+            data_preprocessing_fn: If not None, data will be passed through this function.
             labels_preprocessing_fn: If not None, labels will be passed through this function.
-            cpu_pipeline (callable, optional): Function that takes in data and labels and processes them on cpu
-            gpu_pipeline (callable, optional): Function that takes in data and labels and processes them on gpu
+            cpu_pipeline: Function that takes in data and labels and processes them on cpu
+            gpu_pipeline: Function that takes in data and labels and processes them on gpu
                                                Should start by transforming numpy arrays into torch Tensors.
-            shuffle (bool): If True, then dataset is shuffled for each epoch.
-            seed (int): Seed to use if shuffling is enabled.
-            verbose_lvl (int): Verbose level, the higher the number, the more debug information will be printed
+            shuffle: If True, then dataset is shuffled for each epoch.
+            seed: Seed to use if shuffling is enabled.
+            verbose_lvl: Verbose level, the higher the number, the more debug information will be printed
         """
         # Handles ctrl+c to have a clean exit.
         # self.init_signal_handling(KeyboardInterrupt, signal.SIGINT, self.signal_handler)
@@ -79,8 +84,8 @@ class BatchGenerator:
                                  for entry in data[:batch_size]])
         labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                    for entry in labels[:batch_size]])
-        gpu_data_batch: Optional[npt.NDArray[np.generic]] = None
-        gpu_labels_batch: Optional[npt.NDArray[np.generic]] = None
+        gpu_data_batch: Optional[torch.Tensor] = None
+        gpu_labels_batch: Optional[torch.Tensor] = None
         if self.cpu_pipeline:
             data_batch, labels_batch = self.cpu_pipeline(data_batch, labels_batch)
         if self.gpu_pipeline:
@@ -226,7 +231,7 @@ class BatchGenerator:
                 # Send empty instructions to excess workers
                 self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
 
-    def next_batch(self) -> tuple[npt.NDArray[np.generic], npt.NDArray[np.generic]]:
+    def next_batch(self) -> tuple[npt.NDArray[T_np_img] | torch.Tensor, npt.NDArray[T_np_labels] | torch.Tensor]:
         """Return the next bach of data.
 
         Returns a batch of data, goes to the next epoch when the previous one is finished.
@@ -245,15 +250,15 @@ class BatchGenerator:
 
         self.current_batch_size = self.batch_size if self.step != self.steps_per_epoch else self.last_batch_size
         self._current_cache = (self._current_cache+1) % 2
-        data_batch: npt.NDArray[np.generic] = self._cache_data[self._current_cache][:self.current_batch_size]
-        labels_batch: npt.NDArray[np.generic] = self._cache_labels[self._current_cache][:self.current_batch_size]
+        data_batch: npt.NDArray[T_np_img] = self._cache_data[self._current_cache][:self.current_batch_size]
+        labels_batch: npt.NDArray[T_np_labels] = self._cache_labels[self._current_cache][:self.current_batch_size]
 
         # Start prefetching the next batch
         self._prefetch_batch()
 
         # Transform data to tensor on gpu and do some data augmentation if needed
         if self.gpu_pipeline:
-            data_batch, labels_batch = self.gpu_pipeline(data_batch, labels_batch)
+            return self.gpu_pipeline(data_batch, labels_batch)
 
         return data_batch, labels_batch
 
@@ -348,7 +353,7 @@ if __name__ == "__main__":
         """Function used to run tests on the BatchGenerator."""
         # Prepare mock dataset
         nb_datapoints = 18
-        data = np.arange(nb_datapoints)
+        data = np.arange(nb_datapoints, dtype=np.float64)
         labels = np.arange(nb_datapoints) / 10
 
         # Prepare variables to test against
@@ -380,9 +385,10 @@ if __name__ == "__main__":
                     # Variables used to aggregate dataset
                     agg_data: list[int] = []
                     agg_labels: list[int] = []
-
                     for step, (data_batch, labels_batch) in enumerate(batch_generator, start=1):
                         global_step += 1
+                        # For Pyright, no GPU test here.
+                        assert isinstance(data_batch, np.ndarray) and isinstance(labels_batch, np.ndarray)
                         agg_data += list(data_batch)
                         agg_labels += list(labels_batch)
 
