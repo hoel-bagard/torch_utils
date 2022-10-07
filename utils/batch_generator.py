@@ -110,7 +110,8 @@ class BatchGenerator:
         self._current_cache = 0
         # Indices
         self._cache_memory_indices = shared_memory.SharedMemory(create=True, size=index_list.nbytes)
-        self._cache_indices = np.ndarray(self.nb_datapoints, dtype=int, buffer=self._cache_memory_indices.buf)
+        self._cache_indices: npt.NDArray[np.int64] = np.ndarray(self.nb_datapoints, dtype=int,
+                                                                buffer=self._cache_memory_indices.buf)
         self._cache_indices[:] = index_list
         # Data
         self._cache_memory_data = [
@@ -167,8 +168,7 @@ class BatchGenerator:
                 if self.verbose_lvl > 2:
                     print(f"Worker {worker_index}, Starting to prepare mini-batch of {nb_elts} elements")
 
-                indices_to_process: npt.NDArray[np.int64] = self._cache_indices[indices_start_index:
-                                                                                indices_start_index+nb_elts]
+                indices_to_process = self._cache_indices[indices_start_index:indices_start_index+nb_elts]
 
                 # Get the data (and process it)
                 if self.data_preprocessing_fn:
