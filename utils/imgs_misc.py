@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from einops import rearrange  # type: ignore[reportUnknownVariableType]
+from einops import rearrange
 
 
 def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: bool = True) -> None:

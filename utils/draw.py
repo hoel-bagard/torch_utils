@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from einops import rearrange  # type: ignore
+from einops import rearrange
 
 
 def draw_pred_img(imgs_tensor: torch.Tensor,

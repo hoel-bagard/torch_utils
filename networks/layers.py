@@ -2,7 +2,7 @@ from typing import Callable, Literal, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
-from einops import rearrange  # type: ignore
+from einops import rearrange
 
 
 class Layer(nn.Module):
