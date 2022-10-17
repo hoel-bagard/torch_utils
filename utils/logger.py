@@ -43,7 +43,7 @@ class ColoredFormatter(logging.Formatter):
 def create_logger(name: str,
                   log_dir: Optional[Path] = None,
                   stdout: bool = True,
-                  verbose_level: Literal["debug"] | Literal["info"] | Literal["error"] = "info") -> logging.Logger:
+                  verbose_level: Literal["debug", "info", "error"] = "info") -> logging.Logger:
     """Create a logger.
 
     Args:
