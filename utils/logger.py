@@ -7,7 +7,7 @@ import os
 import sys
 from logging import handlers, StreamHandler
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 
 class ConsoleColor:
@@ -43,14 +43,14 @@ class ColoredFormatter(logging.Formatter):
 def create_logger(name: str,
                   log_dir: Optional[Path] = None,
                   stdout: bool = True,
-                  verbose_level: str = "info") -> logging.Logger:
+                  verbose_level: Literal["debug"] | Literal["info"] | Literal["error"] = "info") -> logging.Logger:
     """Create a logger.
 
     Args:
-        name (str): Name of the logger.
-        log_dir (Path, optional): Folder where the logs will be saved if given.
-        stdout (bool): If true then outputs to the stdout.
-        verbose_level (str): Either debug, info, error
+        name: Name of the logger.
+        log_dir: If not None, the logs will be saved to that folder.
+        stdout: If True then outputs to stdout.
+        verbose_level: Either debug, info, error.
 
     Returns:
         The logger instance.
