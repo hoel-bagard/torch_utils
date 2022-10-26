@@ -1,5 +1,6 @@
+from collections.abc import Callable
 import math
-from typing import Optional
+from typing import Literal, Optional
 
 import torch
 import torch.nn as nn
@@ -12,14 +13,12 @@ def layer_init(layer: nn.Module,
                bias_init: str = "zeros") -> None:
     """Layer initialisation function.
 
-    Most of it comes from https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/sac_continuous_action.py.
-
     Args:
         layer: layer to be initialized.
-        weight_gain: ?
+        weight_gain: Use nn.init.calculate_gain.
         bias_const: ?
-        weights_init: Can be 'xavier', "orthogonal" or 'uniform'.
-        bias_init: Can be 'zeros', 'uniform'.
+        weights_init: Can be "xavier", "orthogonal" or "uniform".
+        bias_init: Can be "zeros", "uniform".
     """
     if isinstance(layer, nn.Linear):
         if weights_init == "xavier":
@@ -29,11 +28,43 @@ def layer_init(layer: nn.Module,
         if bias_init == "zeros":
             torch.nn.init.constant_(layer.bias, bias_const)
     if isinstance(layer, nn.Conv2d):
-        n = layer.kernel_size[0] * layer.kernel_size[1] * layer.out_channels
-        layer.weight.data.normal_(0, math.sqrt(2. / n))
+        if weights_init == "xavier":
+            nn.init.xavier_uniform_(layer.weight, gain=weight_gain)
+        else:
+            n = layer.kernel_size[0] * layer.kernel_size[1] * layer.out_channels
+            layer.weight.data.normal_(0, math.sqrt(2. / n))
     elif isinstance(layer, nn.BatchNorm2d):
         layer.weight.data.fill_(1)
         layer.bias.data.zero_()
+
+
+def xavier_init(gain: float = 1,
+                bias: float = 0,
+                distribution: Literal["uniform", "normal"] = "normal") -> Callable[[nn.Module], None]:
+    def xavier_init_fn(module: nn.Module) -> None:
+        if hasattr(module, "weight") and module.weight is not None:
+            assert isinstance(module.weight, torch.Tensor)
+            if distribution == "uniform":
+                nn.init.xavier_uniform_(module.weight, gain=gain)
+            else:
+                nn.init.xavier_normal_(module.weight, gain=gain)
+        if hasattr(module, "bias") and module.bias is not None:
+            assert isinstance(module.bias, torch.Tensor)
+            nn.init.constant_(module.bias, bias)
+    return xavier_init_fn
+
+
+def normal_init(mean: float = 0,
+                std: float = 1,
+                bias: float = 0) -> Callable[[nn.Module], None]:
+    def normal_init_fn(module: nn.Module) -> None:
+        if hasattr(module, "weight") and module.weight is not None:
+            assert isinstance(module.weight, torch.Tensor)
+            nn.init.normal_(module.weight, mean, std)
+        if hasattr(module, "bias") and module.bias is not None:
+            assert isinstance(module.bias, torch.Tensor)
+            nn.init.constant_(module.bias, bias)
+    return normal_init_fn
 
 
 def get_cnn_output_size(image_sizes: tuple[int, int],
