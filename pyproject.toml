@@ -6,6 +6,6 @@ addopts = [
 
 [tool.isort]
 line_length = 120
-lines-after-imports = 2
+lines_after_imports = 2
 case_sensitive = false
 order_by_type = false

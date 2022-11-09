@@ -11,6 +11,7 @@ from .batch_generator import BatchGenerator
 from .metrics import Metrics
 from .misc import clean_print
 
+
 AcceptedConfigTypes = int | float | str | bool | torch.Tensor
 
 
