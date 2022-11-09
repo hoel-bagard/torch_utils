@@ -1,4 +1,6 @@
 import os
+import subprocess
+from subprocess import CalledProcessError
 
 
 try:
@@ -6,8 +8,6 @@ try:
 except ModuleNotFoundError:
     # The resource module is available only on unix systems.
     pass
-import subprocess
-from subprocess import CalledProcessError
 
 
 def resource_usage() -> tuple[int | None, str | None]:
