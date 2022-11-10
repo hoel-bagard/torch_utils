@@ -20,15 +20,14 @@ def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: boo
         is_bgr: Should be True if the image format is BGR, False otherwise.
     """
     if "DISPLAY" in os.environ:  # TODO: check if that works on Windows too.
+        # Make the image full screen if it's above a given size (assume the screen isn't too small^^)
+        if any(img.shape[:2] > np.asarray([1080, 1440])):
+            cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
+        if not is_bgr and img.shape[2] == 3:
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         while True:
-            # Make the image full screen if it's above a given size (assume the screen isn't too small^^)
-            if any(img.shape[:2] > np.asarray([1080, 1440])):
-                cv2.namedWindow(window_name, cv2.WND_PROP_FULLSCREEN)
-                cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-            if not is_bgr and img.shape[2] == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
             cv2.imshow(window_name, img)
             key = cv2.waitKey(10)
             if key == ord("q"):
