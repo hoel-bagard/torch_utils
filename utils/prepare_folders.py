@@ -71,8 +71,9 @@ def prepare_folders(tb_dir: Optional[Path] = None,
 
         # Makes a copy of all the code (and config) so that the checkpoints are easy to load and use
         # Note: Using git instead of pure python for simplicity.
-        files_to_copy = [Path(p.decode("utf-8")) for p in
-                         subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()]
+        files_to_copy = [path for p in
+                         subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()
+                         if (path:=Path(p.decode("utf-8"))).is_file()]
         if extra_files is not None:
             files_to_copy.extend(extra_files)  # Files that are in the .gitignore
         output_folder = checkpoints_dir / repo_name

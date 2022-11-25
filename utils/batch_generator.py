@@ -12,7 +12,7 @@ import numpy.typing as npt
 import torch
 
 
-T_np_img = np.float64 | np.uint8
+T_np_img = np.float64 | np.float16 | np.uint8
 T_np_labels = np.float64 | np.int64
 
 
