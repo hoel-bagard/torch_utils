@@ -200,7 +200,7 @@ class BatchGenerator:
 
                 # Send signal to the main process to say that everything is ready
                 pipe.send(True)
-            except (KeyboardInterrupt, ValueError):
+            except (KeyboardInterrupt)  # , ValueError):
                 break
 
     def _prefetch_batch(self):
