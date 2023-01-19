@@ -24,7 +24,7 @@ class ConsoleColor:
 
 class ColoredFormatter(logging.Formatter):
     """Formatter adding colors to levelname."""
-    def format(self, record: logging.LogRecord):
+    def format(self, record: logging.LogRecord):  # noqa: A003
         levelno = record.levelno
         if logging.ERROR == levelno:
             levelname_color = ConsoleColor.RED + record.levelname + ConsoleColor.ENDCOLOR
