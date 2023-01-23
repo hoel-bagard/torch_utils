@@ -8,6 +8,7 @@ import sys
 from logging import handlers, StreamHandler
 from pathlib import Path
 from typing import Literal, Optional
+# TODO: Use enum.StrEnum in 3.11
 
 
 class ConsoleColor:
