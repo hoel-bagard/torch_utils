@@ -17,7 +17,7 @@ T_np_labels = np.float64 | np.int64
 
 
 class BatchGenerator:
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0915
         self: Self,
         data: npt.NDArray[np.object_ | T_np_img],
         labels: npt.NDArray[T_np_labels],
@@ -25,8 +25,11 @@ class BatchGenerator:
         nb_workers: int = 1,
         data_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_img]] | None = None,
         labels_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_labels]] | None = None,
-        cpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]] | None = None,
-        gpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[torch.Tensor, torch.Tensor]] | None = None,
+        cpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
+                               tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]] | None = None,
+        gpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
+                               tuple[torch.Tensor, torch.Tensor]] | None = None,
+        *,
         shuffle: bool = False,
         seed: int = 0,
         verbose_lvl: int = 0,
@@ -133,7 +136,7 @@ class BatchGenerator:
         self._prefetch_batch()
         self._process_id = "main"
 
-    def _init_workers(self: Self):
+    def _init_workers(self: Self) -> None:
         """Create workers and pipes / events used to communicate with them."""
         self.stop_event = mp.Event()
         self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
@@ -142,8 +145,11 @@ class BatchGenerator:
             self.worker_processes.append(mp.Process(target=self._worker_fn, args=(worker_index,)))
             self.worker_processes[-1].start()
 
-    def _worker_fn(self: Self, worker_index: int):
-        """Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory."""
+    def _worker_fn(self: Self, worker_index: int) -> None:  # noqa: PLR0912, C901
+        """Load and process a mini-batch of data and puts it in the shared memory.
+
+        Function executed by workers.
+        """
         self._process_id = f"worker_{worker_index}"
         pipe = self.worker_pipes[worker_index][1]
 
@@ -152,7 +158,7 @@ class BatchGenerator:
         # Could / Should use:
         # rng: np.random._generator.Generator = np.random.default_rng()
         # But then it would need to be passed to all the functions that need it
-        np.random.seed(worker_index)
+        np.random.seed(worker_index)  # noqa: NPY002
 
         while not self.stop_event.is_set():
             try:
@@ -161,7 +167,7 @@ class BatchGenerator:
                     current_cache, cache_start_index, indices_start_index, nb_elts = pipe.recv()
                     # If the worker is in excess, then it has nothing to do (small last batch for exemple)
                     if nb_elts == 0:
-                        pipe.send(True)
+                        pipe.send(True)  # noqa: FBT003
                         continue
                 else:
                     continue
@@ -199,11 +205,11 @@ class BatchGenerator:
                     print(f"Worker {worker_index}, data and labels put to cache successfully")
 
                 # Send signal to the main process to say that everything is ready
-                pipe.send(True)
+                pipe.send(True)  # noqa: FBT003
             except (KeyboardInterrupt):  # , ValueError):
                 break
 
-    def _prefetch_batch(self: Self):
+    def _prefetch_batch(self: Self) -> None:
         """Start sending intructions to workers to load the next batch while the previous one is being used."""
         # Prefetch step is one step ahead of the actual one
         if self.step < self.steps_per_epoch:
@@ -278,7 +284,7 @@ class BatchGenerator:
     ) -> None:
         handler_except = functools.partial(handler, exception_class)
         signal.signal(signal_num, handler_except)
-        signal.siginterrupt(signal_num, False)
+        signal.siginterrupt(signal_num, False)  # noqa: FBT003
 
     def signal_handler(
         self: Self,
