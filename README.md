@@ -1,30 +1,31 @@
 # torch_utils
 PyTorch utils library
 
+## Installation
 
-
-## Misc
-### Installation
+```console
+pip install hbtorch-utils
 ```
-pip install -r requirements-dev.txt
-pre-commit install
+
+### Local Installation
+### Requirements
+- Python>=3.11
+- Poetry
+
+### Pip Dependencies
+
+If simply using the package:
+```console
+poetry install & poetry shell
+```
+
+If developing:
+```console
+poetry install --with dev,test & poetry shell
 ```
 
 ### Tests
-A few tests have been written using Pytest. Once Pytest is installed, those tests can be run with:
+A few tests have been written using Pytest. Once the test dependencies are installed, those tests can be run with:
 ```
-python -m pytest -v
-```
-
-### Formating
-The code is trying to follow diverse PEPs conventions (notably PEP8). To have a similar dev environment you can install the following packages (pacman is for arch-based linux distros):
-```
-sudo pacman -S flake8 python-flake8-docstrings
-pip install pep8-naming flake8-import-order flake8-bugbear flake8-quotes flake8-comprehensions
-```
-
-### Run pre-commit on all the files.
-It's a good idea to run the hooks against all of the files when adding new hooks (usually pre-commit will only run on the changed files during git hooks).
-```
-pre-commit run --all-files
+poetry run pytest tests
 ```
