@@ -280,7 +280,12 @@ class BatchGenerator:
         signal.signal(signal_num, handler_except)
         signal.siginterrupt(signal_num, False)
 
-    def signal_handler(self: Self, exception_class: type[Exception], _signal_num: int, _current_stack_frame: object):
+    def signal_handler(
+        self: Self,
+        exception_class: type[Exception],
+        _signal_num: int,
+        _current_stack_frame: object,
+    ) -> None:
         self.release()
         if self.stop_event.is_set():
             raise exception_class
@@ -331,7 +336,7 @@ class BatchGenerator:
 
             # Terminates all the workers
             end_time = time() + 5  # Maximum waiting time (for all processes)
-            for pipe, worker in zip(self.worker_pipes, self.worker_processes):
+            for pipe, worker in zip(self.worker_pipes, self.worker_processes, strict=True):
                 pipe[0].close()
                 worker.join(timeout=max(0.0, end_time - time()))
                 self.worker_pipes.remove(pipe)
