@@ -14,14 +14,14 @@ pip install hbtorch-utils
 
 ### Pip Dependencies
 
-If simply using the package:
+If simply using the package (for torch, you can install the version you want with pip instead of using `--with torch`):
 ```console
-poetry install & poetry shell
+poetry install --with torch & poetry shell
 ```
 
 If developing:
 ```console
-poetry install --with dev,test & poetry shell
+poetry install --with dev,test,torch & poetry shell
 ```
 
 ### Tests
