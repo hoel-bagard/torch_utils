@@ -1,5 +1,6 @@
 from logging import Logger
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 import torch
@@ -14,24 +15,27 @@ AcceptedConfigTypes = int | float | str | bool | torch.Tensor
 
 
 class TensorBoard:
-    def __init__(self,
-                 model: nn.Module,
-                 tb_dir: Path,
-                 train_dataloader: BatchGenerator,
-                 val_dataloader: BatchGenerator,
-                 logger: Logger,
-                 metrics: Metrics | None = None,
-                 write_graph: bool = True) -> None:
+    def __init__(
+        self: Self,
+        model: nn.Module,
+        tb_dir: Path,
+        train_dataloader: BatchGenerator,
+        val_dataloader: BatchGenerator,
+        logger: Logger,
+        metrics: Metrics | None = None,
+        *,
+        write_graph: bool = True,
+    ) -> None:
         """Class with TensorBoard utility functions for classification-like tasks.
 
         Args:
-            model (nn.Module): Pytorch model whose performance are to be recorded
-            tb_dir (Path): Path to where the tensorboard files will be saved
-            train_dataloader (BatchGenerator): DataLoader with a PyTorch DataLoader like interface, contains train data
-            val_dataloader (BatchGenerator): DataLoader containing  validation data
-            logger (Logger): Used to print things.
-            metrics (Metrics, optional): Instance of the Metrics class, used to compute classification metrics
-            write_graph (bool): If True, add the network graph to the TensorBoard
+            model: Pytorch model whose performance are to be recorded
+            tb_dir: Path to where the tensorboard files will be saved
+            train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
+            val_dataloader: DataLoader containing  validation data
+            logger: Used to print things.
+            metrics: Instance of the Metrics class, used to compute classification metrics
+            write_graph: If True, add the network graph to the TensorBoard
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -52,16 +56,16 @@ class TensorBoard:
             self.train_tb_writer.add_graph(model, dummy_input)
             self.train_tb_writer.flush()
 
-    def close_writers(self) -> None:
+    def close_writers(self: Self) -> None:
         self.train_tb_writer.close()
         self.val_tb_writer.close()
 
-    def write_metrics(self, epoch: int, mode: str = "Train") -> None:
-        """Writes metrics in TensorBoard.
+    def write_metrics(self: Self, epoch: int, mode: str = "Train") -> None:
+        """Write metrics in TensorBoard.
 
         Args:
-            epoch (int): Current epoch
-            mode (str): Either "Train" or "Validation"
+            epoch: Current epoch
+            mode: Either "Train" or "Validation"
 
         Raises:
             TypeError: No Metrics instance
@@ -81,11 +85,11 @@ class TensorBoard:
         for img_metric_name, img_metric_value in metrics["imgs"].items():
             tb_writer.add_image(img_metric_name, img_metric_value, global_step=epoch, dataformats="HWC")
 
-    def write_weights_grad(self, epoch: int):
-        """Writes the model's weights and gradients to tensorboard, if the model can provide them.
+    def write_weights_grad(self: Self, epoch: int) -> None:
+        """Write the model's weights and gradients to tensorboard, if the model can provide them.
 
         Args:
-            epoch (int): Current epoch
+            epoch: Current epoch
         """
         try:
             for tag, (weight, grad) in self.model.get_weight_and_grads().items():  # type: ignore
@@ -97,31 +101,33 @@ class TensorBoard:
                       f" does not support recording weights and gradients.")
                 self.weights_warning_printed = True
 
-    def write_loss(self, epoch: int, loss: float, mode: str = "Train"):
-        """Writes loss metric in TensorBoard.
+    def write_loss(self: Self, epoch: int, loss: float, mode: str = "Train") -> None:
+        """Write loss metric in TensorBoard.
 
         Args:
-            epoch (int): Current epoch
-            loss (float): Epoch loss that will be added to the TensorBoard
-            mode (str): Either "Train" or "Validation"
+            epoch: Current epoch
+            loss: Epoch loss that will be added to the TensorBoard
+            mode: Either "Train" or "Validation"
         """
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         tb_writer.add_scalar("Loss", loss, epoch)
         self.train_tb_writer.flush()
 
-    def write_lr(self, epoch: int, lr: float):
-        """Writes learning rate in the TensorBoard.
+    def write_lr(self: Self, epoch: int, lr: float) -> None:
+        """Write learning rate in the TensorBoard.
 
         Args:
-            epoch (int): Current epoch
-            lr (float): Learning rate for the given epoch
+            epoch: Current epoch
+            lr: Learning rate for the given epoch
         """
         self.train_tb_writer.add_scalar("Learning Rate", lr, epoch)
 
-    def write_config(self,
-                     config: dict[str, AcceptedConfigTypes | list[float | int] | tuple[float | int, ...]],
-                     metrics: dict[str, float] | None = None):
-        """Writes the config (and optionally metrics) to the TensorBoard.
+    def write_config(
+        self: Self,
+        config: dict[str, AcceptedConfigTypes | list[float | int] | tuple[float | int, ...]],
+        metrics: dict[str, float] | None = None,
+    ) -> None:
+        """Write the config (and optionally metrics) to the TensorBoard.
 
         Args:
             config: The config to add to the TensorBoard.
@@ -150,7 +156,7 @@ class TensorBoard:
 
 
 if __name__ == "__main__":
-    def _main():
+    def _main() -> None:
         import argparse
 
         from .logger import create_logger
@@ -167,7 +173,7 @@ if __name__ == "__main__":
 
         logger = create_logger("Test TB", verbose_level=args.verbose_level)
 
-        def _test_config():
+        def _test_config() -> None:
             config = {"lr": 4e-3, "Batch Size": 32, "image_sizes": (224, 224)}
             metrics = {"Final/Accuracy": 0.99, "Final/counter": 3}
             tensorboard = TensorBoard(None, output_path, None, None, None, write_graph=False)  # type: ignore

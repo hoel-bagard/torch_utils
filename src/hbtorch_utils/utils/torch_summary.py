@@ -15,12 +15,14 @@ class SummaryEntry(TypedDict):
     nb_params: int
 
 
-def summary(model: nn.Module,
-            input_shape: tuple[int, ...] | list[tuple[int, ...]],
-            line_length: int = 64,
-            batch_size: int = -1,
-            device: torch.device | None = None,
-            dtypes: torch.TensorType | list[torch.TensorType] | None = None) -> list[str]:
+def summary(  # noqa: PLR0915, C901
+    model: nn.Module,
+    input_shape: tuple[int, ...] | list[tuple[int, ...]],
+    line_length: int = 64,
+    batch_size: int = -1,
+    device: torch.device | None = None,
+    dtypes: torch.TensorType | list[torch.TensorType] | None = None,
+) -> list[str]:
     """Make a summary of the given model.
 
     # TODO: Get the layers' names (they appear when simply printing a model)
@@ -42,13 +44,18 @@ def summary(model: nn.Module,
     if dtypes is None:
         dtypes = [torch.FloatTensor] * len(input_shape)  # type: ignore
     elif isinstance(input_shape, list) and (not isinstance(dtypes, list) or len(dtypes) != len(input_shape)):
-        msg = f"The number of values given for the input shapes and the types do not match: input_shape={input_shape!r}, dtypes={dtypes!r}"
+        msg = (
+            "The number of values given for the input shapes and the types do not match:"
+            f"input_shape={input_shape!r}, dtypes={dtypes!r}"
+        )
         raise ValueError(msg)
 
-    def register_hook(module: nn.Module):
-        def hook(module: nn.Module,
-                 inputs: torch.Tensor,
-                 output: list[torch.Tensor] | tuple[torch.Tensor, ...] | torch.Tensor):
+    def register_hook(module: nn.Module) -> None:
+        def hook(
+            module: nn.Module,
+            inputs: torch.Tensor,
+            output: list[torch.Tensor] | tuple[torch.Tensor, ...] | torch.Tensor,
+        ) -> None:
             class_name = str(module.__class__).rsplit(".", maxsplit=1)[-1].split("'")[0]
             module_idx = len(summary_dict)
 
@@ -72,8 +79,10 @@ def summary(model: nn.Module,
                                                trainable=trainable,
                                                nb_params=params)
 
-        if (not isinstance(module, nn.Sequential)
-                and not isinstance(module, nn.ModuleList)):
+        if (
+            not isinstance(module, nn.Sequential)
+            and not isinstance(module, nn.ModuleList)
+        ):
             hooks.append(module.register_forward_hook(hook))
 
     # Multiple inputs to the network
@@ -82,7 +91,7 @@ def summary(model: nn.Module,
 
     # Batch_size of 2 for batchnorm
     x = [torch.rand(2, *in_size).type(dtype).to(device=device)  # type: ignore
-         for in_size, dtype in zip(input_shape, dtypes)]  # type: ignore
+         for in_size, dtype in zip(input_shape, dtypes, strict=True)]  # type: ignore
 
     # Create properties
     summary_dict: OrderedDict[str, SummaryEntry] = OrderedDict()

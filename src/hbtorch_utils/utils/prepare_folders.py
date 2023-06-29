@@ -5,7 +5,7 @@ from pathlib import Path
 from shutil import copy, rmtree
 
 
-def yes_no_prompt(question: str, default: bool = True) -> bool:
+def yes_no_prompt(question: str, *, default: bool = True) -> bool:
     """Prompts the user for a binary answer.
 
     Args:
@@ -28,10 +28,12 @@ def yes_no_prompt(question: str, default: bool = True) -> bool:
     return answer == "y"
 
 
-def prepare_folders(tb_dir: Path | None = None,
-                    checkpoints_dir: Path | None = None,
-                    repo_name: str = "train_code",
-                    extra_files: list[Path] | None = None):
+def prepare_folders(  # noqa: C901
+    tb_dir: Path | None = None,
+    checkpoints_dir: Path | None = None,
+    repo_name: str = "train_code",
+    extra_files: list[Path] | None = None,
+) -> None:
     """Prepare TensorBoard and checkpoints folders.
 
     For the given paths, if the folder already exists, then promts the user on what to do.
@@ -71,7 +73,7 @@ def prepare_folders(tb_dir: Path | None = None,
         # Makes a copy of all the code (and config) so that the checkpoints are easy to load and use
         # Note: Using git instead of pure python for simplicity.
         files_to_copy = [path for p in
-                         subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()
+                         subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()  # noqa: S602, S607, E501
                          if (path:=Path(p.decode("utf-8"))).is_file()]
         if extra_files is not None:
             files_to_copy.extend(extra_files)  # Files that are in the .gitignore

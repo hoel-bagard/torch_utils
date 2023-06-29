@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Self
 
 import torch
 from torch import nn
@@ -8,13 +9,15 @@ from .network_utils import layer_init
 
 
 class CNNFeatureExtractor(nn.Module):
-    def __init__(self,
-                 channels: list[int],
-                 kernel_sizes: list[int],
-                 strides: list[int | tuple[int, int]],
-                 paddings: list[int | tuple[int, int]],
-                 layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
-                 **kwargs: dict[str, object]) -> None:
+    def __init__(
+        self: Self,
+        channels: list[int],
+        kernel_sizes: list[int],
+        strides: list[int | tuple[int, int]],
+        paddings: list[int | tuple[int, int]],
+        layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
+        **kwargs: dict[str, object],
+    ) -> None:
         """Feature extractor.
 
         Args:
@@ -23,6 +26,7 @@ class CNNFeatureExtractor(nn.Module):
             strides: List with the stride for each convolution.
             paddings: List with the padding for each convolution.
             layer_init_fn: Function used to initialise the layers of the network.
+            kwargs: kwargs
         """
         super().__init__()
 
@@ -37,23 +41,25 @@ class CNNFeatureExtractor(nn.Module):
         if layer_init_fn is not None:
             self.apply(layer_init_fn)
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        x = self.blocks(inputs)
-        return x
+    def forward(self: Self, inputs: torch.Tensor) -> torch.Tensor:
+        return self.blocks(inputs)
 
 
 class DarknetFeatureExtrator(nn.Module):
-    def __init__(self,
-                 channels: list[int],
-                 blocks: list[int],
-                 layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
-                 **kwargs: dict[str, object]) -> None:
+    def __init__(
+        self: Self,
+        channels: list[int],
+        blocks: list[int],
+        layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
+        **kwargs: dict[str, object],
+    ) -> None:
         """Feature extractor.
 
         Args:
             channels: List with the number of channels for each convolution.
             blocks: List the number of residual block in each darknet block.
             layer_init_fn: Function used to initialise the layers of the network>.
+            kwargs: kwargs
         """
         super().__init__()
 
@@ -63,6 +69,5 @@ class DarknetFeatureExtrator(nn.Module):
         if layer_init_fn is not None:
             self.apply(layer_init_fn)
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        x = self.blocks(inputs)
-        return x
+    def forward(self: Self, inputs: torch.Tensor) -> torch.Tensor:
+        return self.blocks(inputs)

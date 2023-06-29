@@ -1,6 +1,7 @@
 import shutil
 import time
 from collections.abc import Callable
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
@@ -12,14 +13,16 @@ from .batch_generator import BatchGenerator
 class Trainer:
     """Trainer class that handles training and validation epochs."""
 
-    def __init__(self,
-                 model: torch.nn.Module,
-                 loss_fn: torch.nn.Module,
-                 optimizer: torch.optim.Optimizer,
-                 train_dataloader: BatchGenerator,
-                 val_dataloader: BatchGenerator,
-                 loss_names: list[str] | None = None,
-                 on_epoch_begin: Callable[["Trainer"], None] | None = None) -> None:
+    def __init__(
+        self: Self,
+        model: torch.nn.Module,
+        loss_fn: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        train_dataloader: BatchGenerator,
+        val_dataloader: BatchGenerator,
+        loss_names: list[str] | None = None,
+        on_epoch_begin: Callable[["Trainer"], None] | None = None,
+    ) -> None:
         """Initialize the trainer instance.
 
         Args:
@@ -41,8 +44,8 @@ class Trainer:
         self.on_epoch_begin = on_epoch_begin
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def epoch_loop(self, train: bool = True) -> npt.NDArray[np.float64] | float:
-        """Does a pass on every batch of the train or validation dataset.
+    def epoch_loop(self: Self, *, train: bool = True) -> npt.NDArray[np.float64] | float:
+        """Do a pass on every batch of the train or validation dataset.
 
         Args:
             train: Whether it is a train or validation loop.
@@ -84,38 +87,42 @@ class Trainer:
         epoch_losses = epoch_losses / data_loader.steps_per_epoch
         return epoch_losses if len(epoch_losses) > 1 else float(epoch_losses)  # For backward compatibility
 
-    def train_epoch(self) -> npt.NDArray[np.float64] | float:
-        """Performs a training epoch."""
+    def train_epoch(self: Self) -> npt.NDArray[np.float64] | float:
+        """Perform a training epoch."""
         return self.epoch_loop()
 
-    def val_epoch(self) -> npt.NDArray[np.float64] | float:
-        """Performs a validation epoch."""
+    def val_epoch(self: Self) -> npt.NDArray[np.float64] | float:
+        """Perform a validation epoch."""
         with torch.no_grad():
-            epoch_loss = self.epoch_loop(train=False)
-        return epoch_loss
+            return self.epoch_loop(train=False)
 
     @staticmethod
-    def _print(step: int,
-               max_steps: int,
-               losses: tuple[torch.Tensor, ...],
-               loss_names: list[str],
-               step_time: float,
-               fetch_time: float) -> None:
-        """Prints information related to the current step.
+    def _print(
+        step: int,
+        max_steps: int,
+        losses: tuple[torch.Tensor, ...],
+        loss_names: list[str],
+        step_time: float,
+        fetch_time: float,
+    ) -> None:
+        """Print information related to the current step.
 
         Args:
-            step (int): Current step (within the epoch)
-            max_steps (int): Number of steps in the current epoch
+            step: Current step (within the epoch)
+            max_steps: Number of steps in the current epoch
             losses: Tuple with the loss(es) for the current step.
             loss_names: List with the name for each loss component.
-            step_time (float): Time it took to perform the whole step
-            fetch_time (float): Time it took to load the data for the step
+            step_time: Time it took to perform the whole step
+            fetch_time: Time it took to load the data for the step
         """
         pre_string = f"{step}/{max_steps} ["
-        post_string = "],  " + ",  ".join([f"{name}: {loss.item():.3e}" for name, loss in zip(loss_names, losses)])
+        post_string = "],  "
+        post_string += ",  ".join([f"{name}: {loss.item():.3e}" for name, loss in zip(loss_names, losses, strict=True)])
         post_string += f"  -  Step time: {step_time:.2f}ms  -  Fetch time: {fetch_time:.2f}ms    "
         terminal_cols = shutil.get_terminal_size(fallback=(156, 38)).columns
         progress_bar_len = min(terminal_cols - len(pre_string) - len(post_string)-1, 30)
         epoch_progress = int(progress_bar_len * (step/max_steps))
-        print(pre_string + f"{epoch_progress*'='}>{(progress_bar_len-epoch_progress)*'.'}" + post_string,
-              end=("\r" if step < max_steps else "\n"), flush=True)
+        print(
+            pre_string + f"{epoch_progress*'='}>{(progress_bar_len-epoch_progress)*'.'}" + post_string,
+            end=("\r" if step < max_steps else "\n"), flush=True,
+        )

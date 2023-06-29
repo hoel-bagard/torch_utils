@@ -1,17 +1,20 @@
 import math
+from typing import Self
 
 import torch
 from torch import nn
 
 
 class TransformerLayer(nn.Module):
-    def __init__(self,
-                 input_size: int,
-                 output_size: int,
-                 nhead: int = 4,
-                 dim_feedforward: int = 1024,
-                 nlayers: int = 3,
-                 dropout: float = 0.1) -> None:
+    def __init__(
+        self: Self,
+        input_size: int,
+        output_size: int,
+        nhead: int = 4,
+        dim_feedforward: int = 1024,
+        nlayers: int = 3,
+        dropout: float = 0.1,
+    ) -> None:
         """Initialize the transformer layer.
 
         Args:
@@ -19,8 +22,8 @@ class TransformerLayer(nn.Module):
             output_size: Output size
             nhead: Number of heads in the multi-head attention layers
             dim_feedforward: Dimension of the FFN model in the encoder layers
-            nlayers (int): .
-            dropout (float): .
+            nlayers: .
+            dropout: .
         """
         super().__init__()
         self.pos_encoder = PositionalEncoding(input_size, dropout)
@@ -35,7 +38,7 @@ class TransformerLayer(nn.Module):
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: torch.Tensor) -> torch.Tensor:
+    def forward(self: Self, src: torch.Tensor) -> torch.Tensor:
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src)
         output = self.decoder(output)
@@ -43,7 +46,7 @@ class TransformerLayer(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1000) -> None:
+    def __init__(self: Self, d_model: int, dropout: float = 0.1, max_len: int = 1000) -> None:
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -55,6 +58,6 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer("pe", pe)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self: Self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.pe[:x.size(0), :]  # type: ignore
         return self.dropout(x)

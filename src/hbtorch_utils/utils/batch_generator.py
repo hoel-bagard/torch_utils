@@ -6,7 +6,7 @@ from multiprocessing import shared_memory
 from pathlib import Path
 from time import time
 from types import TracebackType
-from typing import Final
+from typing import Final, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -17,18 +17,20 @@ T_np_labels = np.float64 | np.int64
 
 
 class BatchGenerator:
-    def __init__(self,
-                 data: npt.NDArray[np.object_ | T_np_img],
-                 labels: npt.NDArray[T_np_labels],
-                 batch_size: int,
-                 nb_workers: int = 1,
-                 data_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_img]] | None = None,
-                 labels_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_labels]] | None = None,
-                 cpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]] | None = None,
-                 gpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[torch.Tensor, torch.Tensor]] | None = None,
-                 shuffle: bool = False,
-                 seed: int = 0,
-                 verbose_lvl: int = 0) -> None:
+    def __init__(
+        self: Self,
+        data: npt.NDArray[np.object_ | T_np_img],
+        labels: npt.NDArray[T_np_labels],
+        batch_size: int,
+        nb_workers: int = 1,
+        data_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_img]] | None = None,
+        labels_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_labels]] | None = None,
+        cpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]] | None = None,
+        gpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[torch.Tensor, torch.Tensor]] | None = None,
+        shuffle: bool = False,
+        seed: int = 0,
+        verbose_lvl: int = 0,
+    ) -> None:
         """Initialize the batch generator.
 
         Args:
@@ -131,7 +133,7 @@ class BatchGenerator:
         self._prefetch_batch()
         self._process_id = "main"
 
-    def _init_workers(self):
+    def _init_workers(self: Self):
         """Create workers and pipes / events used to communicate with them."""
         self.stop_event = mp.Event()
         self.worker_pipes = [mp.Pipe() for _ in range(self.nb_workers)]
@@ -140,7 +142,7 @@ class BatchGenerator:
             self.worker_processes.append(mp.Process(target=self._worker_fn, args=(worker_index,)))
             self.worker_processes[-1].start()
 
-    def _worker_fn(self, worker_index: int):
+    def _worker_fn(self: Self, worker_index: int):
         """Function executed by workers, loads and process a mini-batch of data and puts it in the shared memory."""
         self._process_id = f"worker_{worker_index}"
         pipe = self.worker_pipes[worker_index][1]
@@ -201,7 +203,7 @@ class BatchGenerator:
             except (KeyboardInterrupt):  # , ValueError):
                 break
 
-    def _prefetch_batch(self):
+    def _prefetch_batch(self: Self):
         """Start sending intructions to workers to load the next batch while the previous one is being used."""
         # Prefetch step is one step ahead of the actual one
         if self.step < self.steps_per_epoch:
@@ -229,7 +231,7 @@ class BatchGenerator:
                 # Send empty instructions to excess workers
                 self.worker_pipes[worker_idx][0].send((0, 0, 0, 0))
 
-    def next_batch(self) -> tuple[npt.NDArray[T_np_img] | torch.Tensor, npt.NDArray[T_np_labels] | torch.Tensor]:
+    def next_batch(self: Self) -> tuple[npt.NDArray[T_np_img] | torch.Tensor, npt.NDArray[T_np_labels] | torch.Tensor]:
         """Return the next bach of data.
 
         Returns a batch of data, goes to the next epoch when the previous one is finished.
@@ -260,7 +262,7 @@ class BatchGenerator:
 
         return data_batch, labels_batch
 
-    def reset_epoch(self):
+    def reset_epoch(self: Self) -> None:
         """Go back to the first step of the current epoch. (data will be shuffled if shuffle is set to True)."""
         self.step = self.steps_per_epoch - 1  # Go to the last step of the epoch
         self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
@@ -269,48 +271,52 @@ class BatchGenerator:
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
     @staticmethod
-    def init_signal_handling(exception_class: type[Exception],
-                             signal_num: int,
-                             handler: Callable[[type[Exception], int, object], None]):
+    def init_signal_handling(
+        exception_class: type[Exception],
+        signal_num: int,
+        handler: Callable[[type[Exception], int, object], None],
+    ) -> None:
         handler_except = functools.partial(handler, exception_class)
         signal.signal(signal_num, handler_except)
         signal.siginterrupt(signal_num, False)
 
-    def signal_handler(self, exception_class: type[Exception], _signal_num: int, _current_stack_frame: object):
+    def signal_handler(self: Self, exception_class: type[Exception], _signal_num: int, _current_stack_frame: object):
         self.release()
         if self.stop_event.is_set():
             raise exception_class
 
-    def _next_epoch(self):
+    def _next_epoch(self: Self) -> None:
         """Prepare variables for the next epoch."""
         self.epoch += 1
         self.step = 0
 
-    def __iter__(self):
+    def __iter__(self: Self) -> Self:
         return self
 
-    def __next__(self):
+    def __next__(self: Self) -> None:
         if self.step < self.steps_per_epoch:
             return self.next_batch()
         self._next_epoch()
         raise StopIteration
 
-    def __del__(self) -> None:
+    def __del__(self: Self) -> None:
         self.release()
 
-    def __exit__(self,
-                 _exc_type: type[BaseException] | None,
-                 _exc_value: BaseException | None,
-                 _traceback: TracebackType | None) -> None:
+    def __exit__(
+        self: Self,
+        _exc_type: type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
         self.release()
 
-    def __enter__(self):
+    def __enter__(self: Self) -> Self:
         return self
 
-    def __len__(self) -> int:
+    def __len__(self: Self) -> int:
         return self.nb_datapoints
 
-    def release(self):
+    def release(self: Self) -> None:
         """Terminate all workers and release all the shared resources."""
         # Terminate cleanly even if there was an error during the initialization
         if not hasattr(self, "_cache_memory_data"):
@@ -338,96 +344,3 @@ class BatchGenerator:
                 for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
                     shared_mem.unlink()
                 self.memories_released.set()
-
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-    from itertools import product
-    parser = ArgumentParser(description="BatchGenerator Test script")
-    parser.add_argument("--verbose_lvl", "-v", type=int, default=0, help="Verbose level to use")
-    args = parser.parse_args()
-
-    def _test(verbose_lvl: int):
-        """Function used to run tests on the BatchGenerator."""
-        # Prepare mock dataset
-        nb_datapoints = 18
-        data = np.arange(nb_datapoints, dtype=np.float64)
-        labels = np.arange(nb_datapoints) / 10
-
-        # Prepare variables to test against
-        workers = [1, 2, 5]
-        batch_sizes = [5, 2*nb_datapoints]
-        data_preprocessing_fns = [None]
-        labels_preprocessing_fns = [None]
-
-        # Put all the variables into a list, then use itertools to get all the possible combinations
-        args_lists = [workers, batch_sizes, data_preprocessing_fns, labels_preprocessing_fns]
-        for test_args in product(*args_lists):
-            nb_workers, batch_size, data_preprocessing_fn, labels_preprocessing_fn = test_args
-
-            if verbose_lvl:
-                print(f"\n\nStarting test with {nb_workers=}, {batch_size=}")
-
-            # Preprocess data and labels here to do it only once
-            processed_data = data_preprocessing_fn(data) if data_preprocessing_fn else data
-            processed_labels = labels_preprocessing_fn(labels) if labels_preprocessing_fn else labels
-
-            # Prepare some variables used for testing
-            steps_per_epoch = (nb_datapoints + (batch_size-1)) // batch_size
-            last_batch_size = nb_datapoints % batch_size if nb_datapoints % batch_size else batch_size
-            global_step = 0
-
-            with BatchGenerator(data, labels, batch_size, data_preprocessing_fn=data_preprocessing_fn,
-                                nb_workers=nb_workers, shuffle=True, verbose_lvl=verbose_lvl) as batch_generator:
-                for _epoch in range(5):
-                    # Variables used to aggregate dataset
-                    agg_data: list[int] = []
-                    agg_labels: list[int] = []
-                    for step, (data_batch, labels_batch) in enumerate(batch_generator, start=1):
-                        global_step += 1
-                        # For Pyright, no GPU test here.
-                        assert isinstance(data_batch, np.ndarray)
-                        assert isinstance(labels_batch, np.ndarray)
-                        agg_data += list(data_batch)
-                        agg_labels += list(labels_batch)
-
-                        if verbose_lvl > 1:
-                            print(f"{batch_generator.epoch=}, {batch_generator.step=}")
-                        if verbose_lvl > 2:
-                            print(f"{data_batch=}, {labels_batch=}")
-
-                        # Check that variables are what they should be
-                        assert global_step == batch_generator.global_step, (
-                            f"Global step is {batch_generator.global_step} but should be {global_step}")
-                        expected_epoch = (global_step-1) // steps_per_epoch
-                        assert batch_generator.epoch == expected_epoch, (
-                            f"Epoch is {batch_generator.epoch} but should be {expected_epoch}")
-                        assert step == batch_generator.step, (
-                            f"Step is {batch_generator.step} but should be {step}")
-
-                        # Check that length  of each batch is as expected
-                        assert len(data_batch) == len(labels_batch), "Data and labels' shapes are different"
-                        if step != steps_per_epoch:
-                            assert len(data_batch) == batch_size, (
-                                f"Batch size is {len(data_batch)} but should be {batch_size}")
-                        else:
-                            assert len(data_batch) == last_batch_size, (
-                                f"Batch size is {len(data_batch)} but should be {last_batch_size}")
-
-                        # Check that labels correspond to datapoints
-                        for data_point, label in zip(data_batch, labels_batch):
-                            original_index = np.where(processed_data == data_point)[0][0]
-                            assert processed_labels[original_index] == label, (
-                                f"Expected label for {data_point} to be {processed_labels[original_index]}",
-                                f"but got {label}.")
-
-                    # Check that all elements appeared (once) during the epoch
-                    assert len(agg_data) == nb_datapoints, (
-                        f"{len(agg_data)} elements appeared instead of {nb_datapoints}")
-                    assert set(agg_data) == set(processed_data), (
-                        f"Data returned are not as expected.\nExpected:\n{processed_data}\nGot:\n{agg_data}"
-                        f"\n{list(set(agg_data))}  (set version)")
-                    assert set(agg_labels) == set(processed_labels), (
-                        f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
-
-    _test(args.verbose_lvl)

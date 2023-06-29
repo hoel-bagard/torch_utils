@@ -1,16 +1,15 @@
+import contextlib
 import os
 import subprocess
 from subprocess import CalledProcessError
 
-try:
-    import resource
-except ModuleNotFoundError:
+with contextlib.suppress(ModuleNotFoundError):
     # The resource module is available only on unix systems.
-    pass
+    import resource
 
 
 def resource_usage() -> tuple[int | None, str | None]:
-    """Returns the resources used by the process.
+    """Return the resources used by the process.
 
     Taken from https://gitlab.com/corentin-pro/torch_utils/-/blob/master/train.py
     Returns peak RAM usage and VRAM usage at the time this function is called.
@@ -25,7 +24,9 @@ def resource_usage() -> tuple[int | None, str | None]:
         memory_peak = None
     try:
         gpu_memory = subprocess.check_output(
-            "nvidia-smi --query-gpu=memory.used --format=csv,noheader", shell=True).decode()
+            "nvidia-smi --query-gpu=memory.used --format=csv,noheader",  # noqa: S607
+            shell=True,  # noqa: S602
+        ).decode()
         if "CUDA_VISIBLE_DEVICES" in os.environ:
             gpu_memory = gpu_memory.split("\n")[int(os.environ["CUDA_VISIBLE_DEVICES"])]
         else:
