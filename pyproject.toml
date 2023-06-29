@@ -41,11 +41,11 @@ torch = ">=2.0"
 #   {url = "https://download.pytorch.org/whl/cpu/torch-2.0.1-cp311-none-macosx_11_0_arm64.whl", platform = "darwin", python = ">=3.11,<3.12"},
 #   # {url = "https://download.pytorch.org/whl/torch-2.0.1-cp311-cp311-manylinux2014_aarch64.whl", platform = "linux", python = ">=3.11,<3.12"},
 #   # {url = "https://download.pytorch.org/whl/cpu/torch-2.0.1%2Bcpu-cp311-cp311-win_amd64.whl", platform = "win32", python = ">=3.11,<3.12"},
-#   {version = "^2.0.1", platform = "linux", source = "pytorch-cpu"},
-#   {version = "^2.0.1", platform = "win32", source = "pytorch-cpu"},
+#   {version = "^2.0.1", platform = "linux", source = "torch-cpu"},
+#   {version = "^2.0.1", platform = "win32", source = "torch-cpu"},
 # ]
 # [[tool.poetry.source]]
-# name = "pytorch-cpu"
+# name = "torch-cpu"
 # url = "https://download.pytorch.org/whl/cpu"
 # priority = "explicit"
 

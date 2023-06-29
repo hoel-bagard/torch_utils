@@ -1,11 +1,12 @@
 from itertools import product
 
 import numpy as np
-from hbtorch_utils.utils.batch_gnerator import BatchGenerator
+from hbtorch_utils.utils.batch_generator import BatchGenerator
 
 
-def test_batch_generator(verbose_lvl: int) -> None:
+def test_batch_generator() -> None:
     """Function used to run tests on the BatchGenerator."""
+    verbose_lvl = 0
     # Prepare mock dataset
     nb_datapoints = 18
     data = np.arange(nb_datapoints, dtype=np.float64)
