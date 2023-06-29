@@ -86,4 +86,3 @@ def test_batch_generator(verbose_lvl: int) -> None:
                     f"\n{list(set(agg_data))}  (set version)")
                 assert set(agg_labels) == set(processed_labels), (
                     f"labels returned are not as expected.\nExpected:\n{processed_labels}\nGot:\n{agg_labels}")
-

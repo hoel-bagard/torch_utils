@@ -74,7 +74,7 @@ def prepare_folders(  # noqa: C901
         # Note: Using git instead of pure python for simplicity.
         files_to_copy = [path for p in
                          subprocess.check_output("git ls-files --recurse-submodules", shell=True).splitlines()  # noqa: S602, S607, E501
-                         if (path:=Path(p.decode("utf-8"))).is_file()]
+                         if (path := Path(p.decode("utf-8"))).is_file()]
         if extra_files is not None:
             files_to_copy.extend(extra_files)  # Files that are in the .gitignore
         output_folder = checkpoints_dir / repo_name

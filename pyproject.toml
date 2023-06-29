@@ -149,7 +149,7 @@ docstring-convention = "google"
 import-order-style = "smarkets"
 inline-quotes = "double"
 exclude = ["env", "venv", ".venv", ".env"]
-ignore = ["D1", "E226", "NQA102", "W503"]
+ignore = ["D1", "E226", "NQA102", "NQA103", "W503"]
 application-import-names = ["hbtorch_utils"]
 per-file-ignores = ["**/__init__.py:F401", "tests/**.py:I201"]
 
