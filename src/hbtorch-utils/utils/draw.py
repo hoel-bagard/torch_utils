@@ -1,4 +1,3 @@
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -11,7 +10,7 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
                   predictions_tensor: torch.Tensor,
                   labels_tensor: torch.Tensor,
                   label_map: dict[int, str],
-                  size: Optional[tuple[int, int]] = None) -> npt.NDArray[np.uint8]:
+                  size: tuple[int, int] | None = None) -> npt.NDArray[np.uint8]:
     """Draws predictions and labels on the image to help with TensorBoard visualisation.
 
     Args:
@@ -59,7 +58,7 @@ def draw_pred_video(video_tensor: torch.Tensor,
                     prediction_tensor: torch.Tensor,
                     label_map: dict[int, str],
                     n_to_n: bool = False,
-                    size: Optional[tuple[int, int]] = None) -> npt.NDArray[np.uint8]:
+                    size: tuple[int, int] | None = None) -> npt.NDArray[np.uint8]:
     """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:

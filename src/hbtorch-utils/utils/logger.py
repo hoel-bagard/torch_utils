@@ -7,12 +7,14 @@ import os
 import sys
 from logging import handlers, StreamHandler
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
+
 # TODO: Use enum.StrEnum in 3.11
 
 
 class ConsoleColor:
     """Simple shortcut to use colors in the console."""
+
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     GREEN = "\033[92m"
@@ -25,15 +27,16 @@ class ConsoleColor:
 
 class ColoredFormatter(logging.Formatter):
     """Formatter adding colors to levelname."""
+
     def format(self, record: logging.LogRecord):  # noqa: A003
         levelno = record.levelno
-        if logging.ERROR == levelno:
+        if levelno == logging.ERROR:
             levelname_color = ConsoleColor.RED + record.levelname + ConsoleColor.ENDCOLOR
-        elif logging.WARNING == levelno:
+        elif levelno == logging.WARNING:
             levelname_color = ConsoleColor.ORANGE + record.levelname + ConsoleColor.ENDCOLOR
-        elif logging.INFO == levelno:
+        elif levelno == logging.INFO:
             levelname_color = ConsoleColor.GREEN + record.levelname + ConsoleColor.ENDCOLOR
-        elif logging.DEBUG == levelno:
+        elif levelno == logging.DEBUG:
             levelname_color = ConsoleColor.BLUE + record.levelname + ConsoleColor.ENDCOLOR
         else:
             levelname_color = record.levelname
@@ -42,7 +45,7 @@ class ColoredFormatter(logging.Formatter):
 
 
 def create_logger(name: str,
-                  log_dir: Optional[Path] = None,
+                  log_dir: Path | None = None,
                   stdout: bool = True,
                   verbose_level: Literal["debug", "info", "error"] = "info") -> logging.Logger:
     """Create a logger.
@@ -88,6 +91,7 @@ def create_logger(name: str,
         case "error":
             logger.setLevel(logging.ERROR)
         case _:
-            raise ValueError(f"Unexpected logging level: {verbose_level}")
+            msg = f"Unexpected logging level: {verbose_level}"
+            raise ValueError(msg)
 
     return logger

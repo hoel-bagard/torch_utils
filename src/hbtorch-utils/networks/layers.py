@@ -1,8 +1,9 @@
-from typing import Callable, Literal, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Literal
 
 import torch
-import torch.nn as nn
 from einops import rearrange
+from torch import nn
 
 
 class Layer(nn.Module):
@@ -14,10 +15,10 @@ class Layer(nn.Module):
     BATCH_NORM_TRAINING = True
     BATCH_NORM_MOMENTUM = 0.01
 
-    def __init__(self, activation: Callable[[torch.Tensor], torch.Tensor] | Literal[0], use_batch_norm: Optional[bool]):
+    def __init__(self, activation: Callable[[torch.Tensor], torch.Tensor] | Literal[0], use_batch_norm: bool | None) -> None:
         super().__init__()
         # Preload default
-        self.batch_norm: Optional[torch.nn.Module] = None
+        self.batch_norm: torch.nn.Module | None = None
         self.activation = Layer.ACTIVATION(**Layer.ACTIVATION_KWARGS) if activation == 0 else activation
         self.use_batch_norm = Layer.USE_BATCH_NORM if use_batch_norm is None else use_batch_norm
 
@@ -36,11 +37,11 @@ class Conv2D(Layer):
                  in_channels: int,
                  out_channels: int,
                  kernel_size: int = 3,
-                 stride: Union[int, Tuple[int, int]] = 1,
-                 padding: Union[int, Tuple[int, int]] = 0,
+                 stride: int | tuple[int, int] = 1,
+                 padding: int | tuple[int, int] = 0,
                  activation: Callable[[torch.Tensor], torch.Tensor] | Literal[0] = 0,
-                 use_batch_norm: Optional[bool] = None,
-                 **kwargs: dict[str, object]):
+                 use_batch_norm: bool | None = None,
+                 **kwargs: dict[str, object]) -> None:
         super().__init__(activation, use_batch_norm)
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride,
                               padding=padding, bias=not self.use_batch_norm, **kwargs)
@@ -56,12 +57,12 @@ class Conv3D(Layer):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: Union[int, Tuple[int, int, int]] = 3,
-                 stride: Union[int, Tuple[int, int, int]] = 1,
-                 padding: Union[int, Tuple[int, int, int]] = 0,
+                 kernel_size: int | tuple[int, int, int] = 3,
+                 stride: int | tuple[int, int, int] = 1,
+                 padding: int | tuple[int, int, int] = 0,
                  activation: Callable[[torch.Tensor], torch.Tensor] | Literal[0] = 0,
-                 use_batch_norm: Optional[bool] = None,
-                 **kwargs: dict[str, object]):
+                 use_batch_norm: bool | None = None,
+                 **kwargs: dict[str, object]) -> None:
         super().__init__(activation, use_batch_norm)
 
         self.conv = nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
@@ -75,17 +76,17 @@ class Conv3D(Layer):
 
 
 class DarknetResidualBlock(nn.Module):
-    def __init__(self, filters: int):
+    def __init__(self, filters: int) -> None:
         super().__init__()
         self.convs = nn.Sequential(Conv2D(filters, filters//2, 1),
-                                   Conv2D(filters//2, filters, 3, padding=1),)
+                                   Conv2D(filters//2, filters, 3, padding=1))
 
     def forward(self, inputs: torch.Tensor):
         return torch.add(inputs, self.convs(inputs))
 
 
 class DarknetBlock(nn.Module):
-    def __init__(self, in_filters: int, out_filters: int, blocks: int):
+    def __init__(self, in_filters: int, out_filters: int, blocks: int) -> None:
         super().__init__()
         self.conv = Conv2D(in_filters, out_filters, 3, stride=2)
         self.dark_res_blocks = nn.Sequential(*[DarknetResidualBlock(out_filters) for _ in range(blocks)])
@@ -98,7 +99,7 @@ class DarknetBlock(nn.Module):
 
 
 class Rearrange(nn.Module):
-    def __init__(self, pattern: str):
+    def __init__(self, pattern: str) -> None:
         super().__init__()
         if "(" in pattern or ")" in pattern:
             self.permute = False
@@ -110,8 +111,5 @@ class Rearrange(nn.Module):
             self.permute_pattern = [right_expr_split.index(symbol) for symbol in left_expr_split]
 
     def forward(self, x: torch.Tensor):
-        if self.permute:
-            x = x.permute(*self.permute_pattern)
-        else:
-            x = rearrange(x, self.pattern)
+        x = x.permute(*self.permute_pattern) if self.permute else rearrange(x, self.pattern)
         return x

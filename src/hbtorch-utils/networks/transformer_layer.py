@@ -1,7 +1,7 @@
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class TransformerLayer(nn.Module):
@@ -11,7 +11,7 @@ class TransformerLayer(nn.Module):
                  nhead: int = 4,
                  dim_feedforward: int = 1024,
                  nlayers: int = 3,
-                 dropout: float = 0.1):
+                 dropout: float = 0.1) -> None:
         """Initialize the transformer layer.
 
         Args:
@@ -43,7 +43,7 @@ class TransformerLayer(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1000):
+    def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 1000) -> None:
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 

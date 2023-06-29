@@ -1,16 +1,14 @@
 from logging import Logger
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.tensorboard import SummaryWriter  # type: ignore
 
 from .batch_generator import BatchGenerator
 from .metrics import Metrics
 from .misc import clean_print
-
 
 AcceptedConfigTypes = int | float | str | bool | torch.Tensor
 
@@ -22,8 +20,8 @@ class TensorBoard:
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
                  logger: Logger,
-                 metrics: Optional[Metrics] = None,
-                 write_graph: bool = True):
+                 metrics: Metrics | None = None,
+                 write_graph: bool = True) -> None:
         """Class with TensorBoard utility functions for classification-like tasks.
 
         Args:
@@ -69,7 +67,8 @@ class TensorBoard:
             TypeError: No Metrics instance
         """
         if not isinstance(self.metrics, Metrics):
-            raise TypeError("Trying to write metrics, but did not get a Metrics instance during initialization")
+            msg = "Trying to write metrics, but did not get a Metrics instance during initialization"
+            raise TypeError(msg)
 
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         metrics = self.metrics.get_metrics(mode)
@@ -121,7 +120,7 @@ class TensorBoard:
 
     def write_config(self,
                      config: dict[str, AcceptedConfigTypes | list[float | int] | tuple[float | int, ...]],
-                     metrics: Optional[dict[str, float]] = None):
+                     metrics: dict[str, float] | None = None):
         """Writes the config (and optionally metrics) to the TensorBoard.
 
         Args:
@@ -132,7 +131,7 @@ class TensorBoard:
         """
         fixed_config: dict[str, AcceptedConfigTypes] = {}
         for key, value in config.items():
-            if isinstance(value, (tuple, list, np.ndarray)):
+            if isinstance(value, tuple | list | np.ndarray):
                 if len(value) < 3:
                     if isinstance(value, np.ndarray):
                         value = value.tolist()  # Convert from numpy types to python ones

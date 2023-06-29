@@ -1,9 +1,9 @@
 import math
 from collections.abc import Callable
-from typing import Literal, Optional
+from typing import Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def layer_init(layer: nn.Module,
@@ -71,7 +71,7 @@ def get_cnn_output_size(image_sizes: tuple[int, int],
                         sizes: list[int],
                         strides: list[int],
                         paddings: list[int],
-                        output_channels: Optional[int] = None,
+                        output_channels: int | None = None,
                         dense: bool = True) -> int | tuple[int, int]:
     """Computes the output size of a cnn  (flattened).
 

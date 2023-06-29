@@ -1,7 +1,7 @@
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from .layers import Conv2D, DarknetBlock
 from .network_utils import layer_init
@@ -11,10 +11,10 @@ class CNNFeatureExtractor(nn.Module):
     def __init__(self,
                  channels: list[int],
                  kernel_sizes: list[int],
-                 strides: list[Union[int, tuple[int, int]]],
-                 paddings: list[Union[int, tuple[int, int]]],
-                 layer_init_fn: Optional[Callable[[nn.Module], None]] = layer_init,
-                 **kwargs: dict[str, object]):
+                 strides: list[int | tuple[int, int]],
+                 paddings: list[int | tuple[int, int]],
+                 layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
+                 **kwargs: dict[str, object]) -> None:
         """Feature extractor.
 
         Args:
@@ -46,8 +46,8 @@ class DarknetFeatureExtrator(nn.Module):
     def __init__(self,
                  channels: list[int],
                  blocks: list[int],
-                 layer_init_fn: Optional[Callable[[nn.Module], None]] = layer_init,
-                 **kwargs: dict[str, object]):
+                 layer_init_fn: Callable[[nn.Module], None] | None = layer_init,
+                 **kwargs: dict[str, object]) -> None:
         """Feature extractor.
 
         Args:

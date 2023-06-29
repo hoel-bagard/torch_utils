@@ -1,6 +1,6 @@
 import shutil
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -11,14 +11,15 @@ from .batch_generator import BatchGenerator
 
 class Trainer:
     """Trainer class that handles training and validation epochs."""
+
     def __init__(self,
                  model: torch.nn.Module,
                  loss_fn: torch.nn.Module,
                  optimizer: torch.optim.Optimizer,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
-                 loss_names: Optional[list[str]] = None,
-                 on_epoch_begin: Optional[Callable[["Trainer"], None]] = None):
+                 loss_names: list[str] | None = None,
+                 on_epoch_begin: Callable[["Trainer"], None] | None = None) -> None:
         """Initialize the trainer instance.
 
         Args:

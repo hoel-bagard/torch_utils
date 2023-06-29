@@ -2,7 +2,6 @@ import os
 import subprocess
 from subprocess import CalledProcessError
 
-
 try:
     import resource
 except ModuleNotFoundError:
@@ -17,7 +16,7 @@ def resource_usage() -> tuple[int | None, str | None]:
     Returns peak RAM usage and VRAM usage at the time this function is called.
     Note that this is different from peak VRAM usage (as this usually happens before the training loop).
 
-    Returns:
+    Returns
         Peak memory usage and peak GPU usage (if a GPU is present, otherwise None)
     """
     try:

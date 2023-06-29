@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -13,7 +12,7 @@ class Metrics(ABC):
                  model: torch.nn.Module,
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
-                 max_batches: Optional[int] = 10):
+                 max_batches: int | None = 10) -> None:
         """Class computing usefull metrics.
 
         Args:
@@ -33,7 +32,7 @@ class Metrics(ABC):
     @abstractmethod
     def get_metrics(self,
                     mode: str = "Train",
-                    **kwargs: dict[str, object]
+                    **kwargs: dict[str, object],
                     ) -> dict[str, dict[str, dict[str, float] | dict[str, npt.NDArray[np.uint8]]]]:
         """Method returning all the metrics the class can provide.
 

@@ -1,11 +1,11 @@
 """Taken from https://github.com/sksq96/pytorch-summary."""
 
 from collections import OrderedDict
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class SummaryEntry(TypedDict):
@@ -19,8 +19,8 @@ def summary(model: nn.Module,
             input_shape: tuple[int, ...] | list[tuple[int, ...]],
             line_length: int = 64,
             batch_size: int = -1,
-            device: Optional[torch.device] = None,
-            dtypes: Optional[torch.TensorType | list[torch.TensorType]] = None) -> list[str]:
+            device: torch.device | None = None,
+            dtypes: torch.TensorType | list[torch.TensorType] | None = None) -> list[str]:
     """Make a summary of the given model.
 
     # TODO: Get the layers' names (they appear when simply printing a model)
@@ -42,8 +42,8 @@ def summary(model: nn.Module,
     if dtypes is None:
         dtypes = [torch.FloatTensor] * len(input_shape)  # type: ignore
     elif isinstance(input_shape, list) and (not isinstance(dtypes, list) or len(dtypes) != len(input_shape)):
-        raise ValueError(("The number of values given for the input shapes and the types do not match:"
-                          f" {input_shape=}, {dtypes=}"))
+        msg = f"The number of values given for the input shapes and the types do not match: input_shape={input_shape!r}, dtypes={dtypes!r}"
+        raise ValueError(msg)
 
     def register_hook(module: nn.Module):
         def hook(module: nn.Module,
@@ -54,7 +54,7 @@ def summary(model: nn.Module,
 
             m_key = f"{class_name}-{module_idx+1}"
             input_shape_module = [batch_size, *list(inputs[0].size())[1:]]
-            if isinstance(output, (list, tuple)):
+            if isinstance(output, list | tuple):
                 output_shape = [[-1] + list(o.size())[1:] for o in output]
             else:
                 output_shape = [batch_size, *list(output.size())[1:]]
@@ -108,14 +108,13 @@ def summary(model: nn.Module,
     trainable_params = 0
     for layer in summary_dict:
         # input_shape, output_shape, trainable, nb_params
-        summary_lines.append(f"{layer:>20} {str(summary_dict[layer]['output_shape']):>25} "
+        summary_lines.append(f"{layer:>20} {summary_dict[layer]['output_shape']!s:>25} "
                              f"{summary_dict[layer]['nb_params']:>15,}")
         total_params += summary_dict[layer]["nb_params"]
 
         total_output += np.prod(summary_dict[layer]["output_shape"])  # type: ignore
-        if "trainable" in summary_dict[layer]:
-            if summary_dict[layer]["trainable"]:
-                trainable_params += summary_dict[layer]["nb_params"]
+        if "trainable" in summary_dict[layer] and summary_dict[layer]["trainable"]:
+            trainable_params += summary_dict[layer]["nb_params"]
 
     # Assume 4 bytes/number (float on cuda).
     total_input_size = abs(np.prod(sum(input_shape, ())) * batch_size * 4 / (1024 ** 2))

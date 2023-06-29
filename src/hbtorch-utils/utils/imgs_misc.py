@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -69,8 +68,8 @@ def denormalize_np(img: npt.NDArray[np.uint8],
 
 
 def denormalize_tensor(imgs: torch.Tensor,
-                       mean: Optional[torch.Tensor] = None,
-                       std: Optional[torch.Tensor] = None) -> torch.Tensor:
+                       mean: torch.Tensor | None = None,
+                       std: torch.Tensor | None = None) -> torch.Tensor:
     """Undo the normalization process on a batch of images. The normalization values default to the ImageNet ones.
 
     Args:

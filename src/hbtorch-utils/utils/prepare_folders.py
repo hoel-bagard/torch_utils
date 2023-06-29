@@ -3,7 +3,6 @@ import sys
 import time
 from pathlib import Path
 from shutil import copy, rmtree
-from typing import Optional
 
 
 def yes_no_prompt(question: str, default: bool = True) -> bool:
@@ -29,10 +28,10 @@ def yes_no_prompt(question: str, default: bool = True) -> bool:
     return answer == "y"
 
 
-def prepare_folders(tb_dir: Optional[Path] = None,
-                    checkpoints_dir: Optional[Path] = None,
+def prepare_folders(tb_dir: Path | None = None,
+                    checkpoints_dir: Path | None = None,
                     repo_name: str = "train_code",
-                    extra_files: Optional[list[Path]] = None):
+                    extra_files: list[Path] | None = None):
     """Prepare TensorBoard and checkpoints folders.
 
     For the given paths, if the folder already exists, then promts the user on what to do.

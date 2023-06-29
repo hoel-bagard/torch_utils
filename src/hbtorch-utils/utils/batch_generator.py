@@ -1,16 +1,16 @@
 import functools
 import multiprocessing as mp
 import signal
+from collections.abc import Callable
 from multiprocessing import shared_memory
 from pathlib import Path
 from time import time
 from types import TracebackType
-from typing import Callable, Final, Optional, Type
+from typing import Final
 
 import numpy as np
 import numpy.typing as npt
 import torch
-
 
 T_np_img = np.float64 | np.float16 | np.uint8
 T_np_labels = np.float64 | np.int64
@@ -22,15 +22,13 @@ class BatchGenerator:
                  labels: npt.NDArray[T_np_labels],
                  batch_size: int,
                  nb_workers: int = 1,
-                 data_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[T_np_img]]] = None,
-                 labels_preprocessing_fn: Optional[Callable[[Path], npt.NDArray[T_np_labels]]] = None,
-                 cpu_pipeline: Optional[Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
-                                                 tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]]] = None,
-                 gpu_pipeline: Optional[Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]],
-                                                 tuple[torch.Tensor, torch.Tensor]]] = None,
+                 data_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_img]] | None = None,
+                 labels_preprocessing_fn: Callable[[Path], npt.NDArray[T_np_labels]] | None = None,
+                 cpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]]] | None = None,
+                 gpu_pipeline: Callable[[npt.NDArray[T_np_img], npt.NDArray[T_np_labels]], tuple[torch.Tensor, torch.Tensor]] | None = None,
                  shuffle: bool = False,
                  seed: int = 0,
-                 verbose_lvl: int = 0):
+                 verbose_lvl: int = 0) -> None:
         """Initialize the batch generator.
 
         Args:
@@ -84,8 +82,8 @@ class BatchGenerator:
                                  for entry in data[:batch_size]])
         labels_batch = np.asarray([labels_preprocessing_fn(entry) if labels_preprocessing_fn else entry
                                    for entry in labels[:batch_size]])
-        gpu_data_batch: Optional[torch.Tensor] = None
-        gpu_labels_batch: Optional[torch.Tensor] = None
+        gpu_data_batch: torch.Tensor | None = None
+        gpu_labels_batch: torch.Tensor | None = None
         if self.cpu_pipeline:
             data_batch, labels_batch = self.cpu_pipeline(data_batch, labels_batch)
         if self.gpu_pipeline:
@@ -271,17 +269,17 @@ class BatchGenerator:
         self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
 
     @staticmethod
-    def init_signal_handling(exception_class: Type[Exception],
+    def init_signal_handling(exception_class: type[Exception],
                              signal_num: int,
-                             handler: Callable[[Type[Exception], int, object], None]):
+                             handler: Callable[[type[Exception], int, object], None]):
         handler_except = functools.partial(handler, exception_class)
         signal.signal(signal_num, handler_except)
         signal.siginterrupt(signal_num, False)
 
-    def signal_handler(self, exception_class: Type[Exception], _signal_num: int, _current_stack_frame: object):
+    def signal_handler(self, exception_class: type[Exception], _signal_num: int, _current_stack_frame: object):
         self.release()
         if self.stop_event.is_set():
-            raise exception_class()
+            raise exception_class
 
     def _next_epoch(self):
         """Prepare variables for the next epoch."""
@@ -297,19 +295,19 @@ class BatchGenerator:
         self._next_epoch()
         raise StopIteration
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.release()
 
     def __exit__(self,
-                 _exc_type: Optional[Type[BaseException]],
-                 _exc_value: Optional[BaseException],
-                 _traceback: Optional[TracebackType]) -> None:
+                 _exc_type: type[BaseException] | None,
+                 _exc_value: BaseException | None,
+                 _traceback: TracebackType | None) -> None:
         self.release()
 
     def __enter__(self):
         return self
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.nb_datapoints
 
     def release(self):
@@ -388,7 +386,8 @@ if __name__ == "__main__":
                     for step, (data_batch, labels_batch) in enumerate(batch_generator, start=1):
                         global_step += 1
                         # For Pyright, no GPU test here.
-                        assert isinstance(data_batch, np.ndarray) and isinstance(labels_batch, np.ndarray)
+                        assert isinstance(data_batch, np.ndarray)
+                        assert isinstance(labels_batch, np.ndarray)
                         agg_data += list(data_batch)
                         agg_labels += list(labels_batch)
 
