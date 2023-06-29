@@ -1,5 +1,5 @@
 [project]
-name = "hbtorch-utils"
+name = "hbtorch_utils"
 authors = [{name="Bagard Hoel"}]
 description = "Torch Utils"
 readme = "README.md"
@@ -18,7 +18,7 @@ requires-python = ">=3.10"
 "Bug Tracker" = "https://github.com/hoel-bagard/torch-utils/issues"
 
 [tool.poetry]
-name = "hbtorch-utils"
+name = "hbtorch_utils"
 version = "0.2.0"
 description = "Torch Utils"
 authors = ["Bagard Hoel"]
@@ -112,7 +112,7 @@ docstring-quotes = "double"
 max-args = 10
 
 [tool.pyright]
-include = ["src/hbtorch-utils"]
+include = ["src/hbtorch_utils"]
 ignore = ["**/__init__.py"]
 
 pythonVersion = "3.11"
@@ -156,7 +156,7 @@ import-order-style = "smarkets"
 inline-quotes = "double"
 exclude = ["env", "venv", ".venv", ".env"]
 ignore = ["D1", "E226", "NQA102", "W503"]
-application-import-names = ["hbtorch-utils"]
+application-import-names = ["hbtorch_utils"]
 per-file-ignores = ["**/__init__.py:F401", "tests/**.py:I201"]
 
 [tool.pylint.messages_control]
