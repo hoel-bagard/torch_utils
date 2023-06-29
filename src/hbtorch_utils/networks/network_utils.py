@@ -6,11 +6,13 @@ import torch
 from torch import nn
 
 
-def layer_init(layer: nn.Module,
-               weight_gain: int = 1,
-               bias_const: float = 0,
-               weights_init: str = "xavier",
-               bias_init: str = "zeros") -> None:
+def layer_init(
+    layer: nn.Module,
+    weight_gain: int = 1,
+    bias_const: float = 0,
+    weights_init: str = "xavier",
+    bias_init: str = "zeros",
+) -> None:
     """Layer initialisation function.
 
     Args:
@@ -38,42 +40,49 @@ def layer_init(layer: nn.Module,
         layer.bias.data.zero_()
 
 
-def xavier_init(gain: float = 1,
-                bias: float = 0,
-                distribution: Literal["uniform", "normal"] = "normal") -> Callable[[nn.Module], None]:
+def xavier_init(
+    gain: float = 1,
+    bias: float = 0,
+    distribution: Literal["uniform", "normal"] = "normal",
+) -> Callable[[nn.Module], None]:
     def xavier_init_fn(module: nn.Module) -> None:
         if hasattr(module, "weight") and module.weight is not None:
-            assert isinstance(module.weight, torch.Tensor)
+            assert isinstance(module.weight, torch.Tensor)  # noqa: S101  For pyright
             if distribution == "uniform":
                 nn.init.xavier_uniform_(module.weight, gain=gain)
             else:
                 nn.init.xavier_normal_(module.weight, gain=gain)
         if hasattr(module, "bias") and module.bias is not None:
-            assert isinstance(module.bias, torch.Tensor)
+            assert isinstance(module.bias, torch.Tensor)  # noqa: S101  For pyright
             nn.init.constant_(module.bias, bias)
     return xavier_init_fn
 
 
-def normal_init(mean: float = 0,
-                std: float = 1,
-                bias: float = 0) -> Callable[[nn.Module], None]:
+def normal_init(
+    mean: float = 0,
+    std: float = 1,
+    bias: float = 0,
+) -> Callable[[nn.Module], None]:
     def normal_init_fn(module: nn.Module) -> None:
         if hasattr(module, "weight") and module.weight is not None:
-            assert isinstance(module.weight, torch.Tensor)
+            assert isinstance(module.weight, torch.Tensor)  # noqa: S101  For pyright
             nn.init.normal_(module.weight, mean, std)
         if hasattr(module, "bias") and module.bias is not None:
-            assert isinstance(module.bias, torch.Tensor)
+            assert isinstance(module.bias, torch.Tensor)  # noqa: S101  For pyright
             nn.init.constant_(module.bias, bias)
     return normal_init_fn
 
 
-def get_cnn_output_size(image_sizes: tuple[int, int],
-                        sizes: list[int],
-                        strides: list[int],
-                        paddings: list[int],
-                        output_channels: int | None = None,
-                        dense: bool = True) -> int | tuple[int, int]:
-    """Computes the output size of a cnn  (flattened).
+def get_cnn_output_size(
+    image_sizes: tuple[int, int],
+    sizes: list[int],
+    strides: list[int],
+    paddings: list[int],
+    output_channels: int | None = None,
+    *,
+    dense: bool = True,
+) -> int | tuple[int, int]:
+    """Compute the output size of a cnn  (flattened).
 
     Args:
         image_sizes: Dimensions of the input image (width, height).
@@ -87,13 +96,15 @@ def get_cnn_output_size(image_sizes: tuple[int, int],
         The output size of the cnn, either as an int or a (width, height) tuple.
     """
     width, height = image_sizes
-    for kernel_size, stride, padding in zip(sizes, strides, paddings):
+    for kernel_size, stride, padding in zip(sizes, strides, paddings, strict=True):
         width = ((width - kernel_size + 2*padding) // stride) + 1
 
-    for kernel_size, stride, padding in zip(sizes, strides, paddings):
+    for kernel_size, stride, padding in zip(sizes, strides, paddings, strict=True):
         height = ((height - kernel_size + 2*padding) // stride) + 1
 
     if dense:
-        assert output_channels, "The output_channels argument is required in the 'dense' case."
+        if output_channels is None:
+            msg = "The output_channels argument is required in the 'dense' case."
+            raise ValueError(msg)
         return width*height*output_channels
     return (width, height)

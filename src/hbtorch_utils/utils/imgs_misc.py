@@ -7,7 +7,7 @@ import torch
 from einops import rearrange
 
 
-def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", is_bgr: bool = True) -> None:
+def show_img(img: npt.NDArray[np.uint8], window_name: str = "Image", *, is_bgr: bool = True) -> None:
     """Display the given image.
 
     If a display (monitor) is detected, then display the image on the screen until the user presses the "q" key.

@@ -55,7 +55,7 @@ class Conv2D(Layer):
             out_channels, momentum=Layer.BATCH_NORM_MOMENTUM,
             track_running_stats=Layer.BATCH_NORM_TRAINING) if self.use_batch_norm else None
 
-    def forward(self: Self, input_data: torch.Tensor):
+    def forward(self: Self, input_data: torch.Tensor) -> torch.Tensor:
         return super().forward(self.conv(input_data))
 
 
@@ -99,7 +99,7 @@ class DarknetResidualBlock(nn.Module):
             Conv2D(filters//2, filters, 3, padding=1),
         )
 
-    def forward(self: Self, inputs: torch.Tensor):
+    def forward(self: Self, inputs: torch.Tensor) -> torch.Tensor:
         return torch.add(inputs, self.convs(inputs))
 
 
@@ -129,5 +129,4 @@ class Rearrange(nn.Module):
             self.permute_pattern = [right_expr_split.index(symbol) for symbol in left_expr_split]
 
     def forward(self: Self, x: torch.Tensor) -> torch.Tensor:
-        x = x.permute(*self.permute_pattern) if self.permute else rearrange(x, self.pattern)
-        return x
+        return x.permute(*self.permute_pattern) if self.permute else rearrange(x, self.pattern)

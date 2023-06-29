@@ -30,7 +30,7 @@ def draw_pred_img(imgs_tensor: torch.Tensor,
     imgs = rearrange(imgs, "b c w h -> b w h c")  # imgs.transpose(0, 2, 3, 1)
 
     out_imgs = []
-    for img, preds, label in zip(imgs, predictions, labels):
+    for img, preds, label in zip(imgs, predictions, labels, strict=True):
         nb_to_keep = 3 if len(preds) > 3 else 2  # have at most 3 classes printed
         idx = np.argpartition(preds, -nb_to_keep)[-nb_to_keep:]  # Gets indices of top predictions
         idx = idx[np.argsort(preds[idx])][::-1]
@@ -57,14 +57,15 @@ def draw_pred_video(video_tensor: torch.Tensor,
                     label_tensor: torch.Tensor,
                     prediction_tensor: torch.Tensor,
                     label_map: dict[int, str],
+                    *,
                     n_to_n: bool = False,
                     size: tuple[int, int] | None = None) -> npt.NDArray[np.uint8]:
     """Draws predictions and labels on the video to help with TensorBoard visualisation.
 
     Args:
-        video: Raw video.
-        label: Label corresponding to the video
-        prediction: Prediction of the network, after softmax but before taking argmax
+        video_tensor: Raw video.
+        label_tensor: Label corresponding to the video
+        prediction_tensor: Prediction of the network, after softmax but before taking argmax
         label_map: Dictionary linking class index to class name
         n_to_n: True if using one label for each element of the sequence
         size: If given, the images will be resized to this size
@@ -83,7 +84,7 @@ def draw_pred_video(video_tensor: torch.Tensor,
     video = rearrange(video, "b c h w -> b h w c")
 
     new_video_list = []
-    for img, pred, label in zip(video, preds, labels):
+    for img, pred, label in zip(video, preds, labels, strict=True):
         # If there are too many classes, just print the top 3 ones
         if len(pred) > 5:
             # Gets indices of top 3 pred

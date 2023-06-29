@@ -33,7 +33,7 @@ class TransformerLayer(nn.Module):
 
         self.init_weights()
 
-    def init_weights(self):
+    def init_weights(self: Self) -> None:
         initrange = 0.1
         self.decoder.bias.data.zero_()
         self.decoder.weight.data.uniform_(-initrange, initrange)
