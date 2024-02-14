@@ -16,13 +16,13 @@ def clean_print(msg: str, fallback: tuple[int, int] = (156, 38), end: str = "\n"
 
 
 def get_config_as_dict(config: object) -> dict[str, object]:
-    """Take a config object (class with class attributes) and return it as dictionnary.
+    """Take a config object (class with class attributes) and return it as dictionary.
 
     Args:
         config: A config is just a python class with some class variables.
 
     Returns:
-        config_dict: A dictionnary mapping a (lowercase) class variable name to its value.
+        config_dict: A dictionary mapping a (lowercase) class variable name to its value.
     """
     config_attribute_dict = vars(config)
 
@@ -35,14 +35,14 @@ def get_config_as_dict(config: object) -> dict[str, object]:
 
 
 def get_dataclass_as_dict(config: object, lower_case: bool = True) -> dict[str, Any]:
-    """Takes a dataclass instance and returns it as a dictionnary.
+    """Takes a dataclass instance and returns it as a dictionary.
 
     Args:
         config: The dataclass instance.
         lower_case: If true then the field names will all be lowercase.
 
     Returns:
-        A dictionnary where the keys are the field names and the values are the config values.
+        A dictionary where the keys are the field names and the values are the config values.
     """
     if lower_case:
         return {field.name.lower(): getattr(config, field.name) for field in fields(config)}

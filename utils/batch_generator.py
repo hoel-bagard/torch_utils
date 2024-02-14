@@ -148,7 +148,7 @@ class BatchGenerator:
         pipe = self.worker_pipes[worker_index][1]
 
         # Reinitialize numpy's random because data augmentation should be different between workers.
-        # (If this is not done, the same data augmentation might be applied to all the elements of a batch for exemple)
+        # (If this is not done, the same data augmentation might be applied to all the elements of a batch for example)
         # Could / Should use:
         # rng: np.random._generator.Generator = np.random.default_rng()
         # But then it would need to be passed to all the functions that need it
@@ -159,7 +159,7 @@ class BatchGenerator:
                 # Check if there is a message to be received. (prevents process from getting stuck)
                 if pipe.poll(0.05):
                     current_cache, cache_start_index, indices_start_index, nb_elts = pipe.recv()
-                    # If the worker is in excess, then it has nothing to do (small last batch for exemple)
+                    # If the worker is in excess, then it has nothing to do (small last batch for example)
                     if nb_elts == 0:
                         pipe.send(True)
                         continue
@@ -204,7 +204,7 @@ class BatchGenerator:
                 break
 
     def _prefetch_batch(self):
-        """Start sending intructions to workers to load the next batch while the previous one is being used."""
+        """Start sending instructions to workers to load the next batch while the previous one is being used."""
         # Prefetch step is one step ahead of the actual one
         if self.step < self.steps_per_epoch:
             step = (self.step + 1)
@@ -268,7 +268,7 @@ class BatchGenerator:
         self.next_batch()  # Take the last batch and ignore it  (to have the prefetch function called)
         self.global_step -= 1  # Do not count the extra step done in nest_batch() in the global counter
         self._next_epoch()
-        self.epoch -= 1  # Since the call to _next_epoch increments the counter, substract 1
+        self.epoch -= 1  # Since the call to _next_epoch increments the counter, subtract 1
 
     @staticmethod
     def init_signal_handling(exception_class: Type[Exception],
@@ -318,7 +318,7 @@ class BatchGenerator:
         if not hasattr(self, "_cache_memory_data"):
             return
 
-        # Closes acces to the shared memories
+        # Closes access to the shared memories
         for shared_mem in self._cache_memory_data + self._cache_memory_labels + [self._cache_memory_indices]:
             shared_mem.close()
 

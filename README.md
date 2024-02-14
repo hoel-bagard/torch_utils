@@ -16,7 +16,7 @@ A few tests have been written using Pytest. Once Pytest is installed, those test
 python -m pytest -v
 ```
 
-### Formating
+### Formatting
 The code is trying to follow diverse PEPs conventions (notably PEP8). To have a similar dev environment you can install the following packages (pacman is for arch-based linux distros):
 ```
 sudo pacman -S flake8 python-flake8-docstrings

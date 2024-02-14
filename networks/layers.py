@@ -26,7 +26,7 @@ class Layer(nn.Module):
         if self.activation is not None:
             output = self.activation(output)
         if self.use_batch_norm and self.batch_norm is not None:
-            # It is assumed here that if using batch norm, then self.batch_norm has been instanciated.
+            # It is assumed here that if using batch norm, then self.batch_norm has been instantiated.
             output = self.batch_norm(output)
         return output
 

@@ -28,7 +28,7 @@ def summary(model: nn.Module,
     Args:
         model: The model whose summary should be created.
         input_shape: The input shape of the network.
-        line_length: Number of caracters per line.
+        line_length: Number of characters per line.
         batch_size: ?
         device: ?
         dtypes: Type of each input, should have the same shape as input_shape

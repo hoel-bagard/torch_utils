@@ -69,7 +69,7 @@ def create_logger(name: str,
         logger.addHandler(file_log_handler)
 
     if stdout:
-        # Add an handler to the logging system (default has none) : outputing in stdout
+        # Add an handler to the logging system (default has none) : outputting in stdout
         terminal_log_handler = StreamHandler(sys.stdout)
         if os.name != "nt":
             # Fancy color for non windows console

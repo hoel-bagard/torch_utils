@@ -14,7 +14,7 @@ class Metrics(ABC):
                  train_dataloader: BatchGenerator,
                  val_dataloader: BatchGenerator,
                  max_batches: Optional[int] = 10):
-        """Class computing usefull metrics.
+        """Class computing useful metrics.
 
         Args:
             model (torch.nn.Module): The PyTorch model being trained.
@@ -37,9 +37,9 @@ class Metrics(ABC):
                     ) -> dict[str, dict[str, dict[str, float] | dict[str, npt.NDArray[np.uint8]]]]:
         """Method returning all the metrics the class can provide.
 
-        This Method calls the class's other method to aggregate all the metrics into a dictionnary.
-        The dictionnary contains a 2 keys: "scalars" and "imgs".
-        For those two keys, the associated value is a dictionnary where the key is the metrics' name,
+        This Method calls the class's other method to aggregate all the metrics into a dictionary.
+        The dictionary contains a 2 keys: "scalars" and "imgs".
+        For those two keys, the associated value is a dictionary where the key is the metrics' name,
         and the value its value.
 
         Examples:
@@ -57,5 +57,5 @@ class Metrics(ABC):
             mode: Either "Train" or "Validation", determines which dataloader to use.
 
         Returns:
-            dict: The dictionnary containing the metrics the class provides
+            dict: The dictionary containing the metrics the class provides
         """

@@ -35,7 +35,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
                     extra_files: Optional[list[Path]] = None):
     """Prepare TensorBoard and checkpoints folders.
 
-    For the given paths, if the folder already exists, then promts the user on what to do.
+    For the given paths, if the folder already exists, then prompts the user on what to do.
     If the checkpoints_dir path is given, then the project's files are copied in that folder to facilitate future use.
 
     Args:
@@ -44,7 +44,7 @@ def prepare_folders(tb_dir: Optional[Path] = None,
         repo_name (str): Name of the project (git repo name), used when checkpoints_dir is given.
         extra_files (list[Path], optional): List of files that are in the .gitignore but that should still be copied.
     """
-    # If path not None -> promt to remove if exist
+    # If path not None -> prompt to remove if exist
     if tb_dir is not None:
         if tb_dir.exists():
             delete = yes_no_prompt(f"TensorBoard folder '{tb_dir}' already exists, do you want to delete it ?")
